@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300" font-family="Helvetica, Arial, sans-serif">
+<rect x="34" y="14" width="172" height="272" rx="46" fill="#0b0b0d" stroke="#2a2a2e" stroke-width="2"/>
+<rect x="206" y="120" width="7" height="34" rx="3" fill="#3a3a3e"/>
+<rect x="48" y="28" width="144" height="244" rx="36" fill="#000"/>
+<clipPath id="wc"><rect x="48" y="28" width="144" height="244" rx="36"/></clipPath>
+<g clip-path="url(#wc)">
+<text x="120" y="50" font-size="10" fill="#8ea0c4" text-anchor="middle">Complications HaTadhar</text>
+<!-- circular -->
+<circle cx="88" cy="92" r="22" fill="none" stroke="#4F9BD9" stroke-width="3"/>
+<text x="88" y="90" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">11:59</text>
+<text x="88" y="102" font-size="7" fill="#9FC4E8" text-anchor="middle">שעה יהודית</text>
+<text x="88" y="128" font-size="8" fill="#7A8CA3" text-anchor="middle">circular</text>
+<!-- corner -->
+<path d="M 134 70 A 26 26 0 0 1 160 96" fill="none" stroke="#E7B53D" stroke-width="3"/>
+<text x="152" y="92" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">16:47</text>
+<text x="152" y="128" font-size="8" fill="#7A8CA3" text-anchor="middle">corner</text>
+<!-- rectangular -->
+<rect x="62" y="150" width="116" height="44" rx="8" fill="#101c33"/>
+<text x="70" y="168" font-size="9" fill="#9FC4E8">א׳ תמוז · יום חול</text>
+<text x="70" y="184" font-size="12" fill="#fff" font-weight="700">מנחה קטנה 16:47</text>
+<text x="120" y="208" font-size="8" fill="#7A8CA3" text-anchor="middle">rectangular</text>
+<!-- inline -->
+<rect x="62" y="224" width="116" height="22" rx="11" fill="#101c33"/>
+<text x="120" y="239" font-size="9" fill="#cdd8ea" text-anchor="middle">⌚ 11:59 · נרות 19:10</text>
+<text x="120" y="262" font-size="8" fill="#7A8CA3" text-anchor="middle">inline</text>
+</g>
+<text x="120" y="290" font-size="8" fill="#7A8CA3" text-anchor="middle">watchOS · complications (4 familles)</text>
+</svg>

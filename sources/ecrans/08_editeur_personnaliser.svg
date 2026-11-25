@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 336 640" width="336" height="640" font-family="Helvetica, Arial, sans-serif">
+<defs><radialGradient id="skyp" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#FFF5DC"/><stop offset="1" stop-color="#B6D2EA"/></radialGradient></defs>
+<rect x="0" y="0" width="336" height="640" rx="22" fill="#EAF1F8"/>
+<!-- bottom sheet -->
+<rect x="0" y="40" width="336" height="600" rx="20" fill="#fff"/>
+<rect x="150" y="56" width="36" height="4" rx="2" fill="#DBE3EE"/>
+<text x="24" y="86" font-size="21" fill="#1B3A5C" font-weight="700" font-family="Georgia,serif">Personnaliser</text>
+<text x="312" y="86" font-size="12" fill="#7A8CA3" text-anchor="end">aperçu en direct</text>
+<!-- preview dial -->
+<circle cx="168" cy="170" r="62" fill="url(#skyp)" stroke="#111" stroke-width="4"/>
+<path d="M 214 128 A 62 62 0 0 1 226 152" fill="none" stroke="#4F9BD9" stroke-width="5" stroke-linecap="round"/>
+<g fill="#1B3A5C" font-size="11" text-anchor="middle" font-family="Georgia,serif"><text x="168" y="124">12</text><text x="214" y="174">3</text><text x="168" y="222">6</text><text x="122" y="174">9</text></g>
+<line x1="168" y1="170" x2="190" y2="152" stroke="#111" stroke-width="4" stroke-linecap="round"/><line x1="168" y1="170" x2="168" y2="132" stroke="#111" stroke-width="2.5"/><line x1="168" y1="170" x2="150" y2="182" stroke="#C0392B" stroke-width="1.5"/><circle cx="168" cy="170" r="4" fill="#111"/>
+<!-- Cadran row -->
+<text x="24" y="262" font-size="12" fill="#7A8CA3" font-weight="600">Cadran</text>
+<g font-size="13" font-weight="600">
+<rect x="24" y="272" width="142" height="34" rx="12" fill="rgba(79,155,217,0.08)" stroke="#4F9BD9" stroke-width="2"/><circle cx="40" cy="289" r="6" fill="none" stroke="#4F9BD9" stroke-width="2"/><circle cx="40" cy="289" r="2.5" fill="#4F9BD9"/><text x="54" y="294" fill="#4F9BD9">Classique</text>
+<rect x="170" y="272" width="142" height="34" rx="12" fill="#F5F8FC" stroke="#DBE3EE"/><circle cx="186" cy="289" r="6" fill="none" stroke="#7A8CA3" stroke-width="2"/><text x="200" y="294" fill="#1B3A5C">Rétro</text>
+<rect x="24" y="314" width="142" height="34" rx="12" fill="#F5F8FC" stroke="#DBE3EE"/><circle cx="40" cy="331" r="6" fill="none" stroke="#7A8CA3" stroke-width="2"/><text x="54" y="336" fill="#1B3A5C">Minimaliste</text>
+<rect x="170" y="314" width="142" height="34" rx="12" fill="#F5F8FC" stroke="#DBE3EE"/><circle cx="186" cy="331" r="6" fill="none" stroke="#7A8CA3" stroke-width="2"/><text x="200" y="336" fill="#1B3A5C">Digital</text>
+</g>
+<!-- segmented rows -->
+<text x="24" y="372" font-size="12" fill="#7A8CA3" font-weight="600">Fond</text>
+<g font-size="11.5"><rect x="24" y="380" width="69" height="30" rx="9" fill="#4F9BD9"/><text x="58" y="399" fill="#fff" text-anchor="middle">Ciel</text><rect x="98" y="380" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="132" y="399" fill="#1B3A5C" text-anchor="middle">Anneau</text><rect x="172" y="380" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="206" y="399" fill="#1B3A5C" text-anchor="middle">Clair</text><rect x="246" y="380" width="66" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="279" y="399" fill="#1B3A5C" text-anchor="middle">Sombre</text></g>
+<text x="24" y="430" font-size="12" fill="#7A8CA3" font-weight="600">Couronne de zmanim</text>
+<g font-size="11.5"><rect x="24" y="438" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="58" y="457" fill="#1B3A5C" text-anchor="middle">Aucune</text><rect x="98" y="438" width="69" height="30" rx="9" fill="#4F9BD9"/><text x="132" y="457" fill="#fff" text-anchor="middle">Prochain</text><rect x="172" y="438" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="206" y="457" fill="#1B3A5C" text-anchor="middle">Arcs</text><rect x="246" y="438" width="66" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="279" y="457" fill="#1B3A5C" text-anchor="middle">Tout</text></g>
+<text x="24" y="488" font-size="12" fill="#7A8CA3" font-weight="600">Repères</text>
+<g font-size="11.5"><rect x="24" y="496" width="69" height="30" rx="9" fill="#4F9BD9"/><text x="58" y="515" fill="#fff" text-anchor="middle">1·2·3</text><rect x="98" y="496" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="132" y="515" fill="#1B3A5C" text-anchor="middle">I·II·III</text><rect x="172" y="496" width="69" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="206" y="515" fill="#1B3A5C" text-anchor="middle">Traits</text><rect x="246" y="496" width="66" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="279" y="515" fill="#1B3A5C" text-anchor="middle">4 pts</text></g>
+<text x="24" y="546" font-size="12" fill="#7A8CA3" font-weight="600">Aiguilles</text>
+<g font-size="11.5"><rect x="24" y="554" width="93" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="70" y="573" fill="#1B3A5C" text-anchor="middle">Juive</text><rect x="122" y="554" width="93" height="30" rx="9" fill="#4F9BD9"/><text x="168" y="573" fill="#fff" text-anchor="middle">Civile</text><rect x="220" y="554" width="92" height="30" rx="9" fill="#fff" stroke="#CDD8E6"/><text x="266" y="573" fill="#1B3A5C" text-anchor="middle">Les deux</text></g>
+<!-- save -->
+<rect x="24" y="596" width="288" height="34" rx="10" fill="#4F9BD9"/><text x="168" y="618" font-size="14" fill="#fff" text-anchor="middle" font-weight="500">Enregistrer mon cadran</text>
+</svg>

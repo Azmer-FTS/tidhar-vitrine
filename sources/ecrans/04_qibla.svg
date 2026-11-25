@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 336 640" width="336" height="640" font-family="Helvetica, Arial, sans-serif">
+<defs>
+<radialGradient id="cbg" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#22335c"/><stop offset="1" stop-color="#0d1730"/></radialGradient>
+<radialGradient id="cone" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#5CC4DE" stop-opacity="0.45"/><stop offset="1" stop-color="#5CC4DE" stop-opacity="0"/></radialGradient>
+</defs>
+<rect x="0" y="0" width="336" height="640" rx="22" fill="#EAF1F8" stroke="#DBE3EE" stroke-width="1"/>
+<text x="168" y="70" font-size="13" fill="#7A8CA3" text-anchor="middle">כיוון תפילה</text>
+<!-- instrument -->
+<circle cx="168" cy="300" r="130" fill="url(#cbg)" stroke="#091022" stroke-width="3"/>
+<!-- graduations -->
+<g stroke="#fff" stroke-width="1">
+<g opacity="0.8" stroke-width="2"><line x1="168" y1="176" x2="168" y2="188"/><line x1="278" y1="238" x2="268" y2="244"/><line x1="292" y1="300" x2="280" y2="300"/><line x1="278" y1="362" x2="268" y2="356"/><line x1="168" y1="424" x2="168" y2="412"/><line x1="58" y1="362" x2="68" y2="356"/><line x1="44" y1="300" x2="56" y2="300"/><line x1="58" y1="238" x2="68" y2="244"/></g>
+</g>
+<g font-size="8" fill="#aab6cc" text-anchor="middle"><text x="168" y="203">0</text><text x="245" y="226">30</text><text x="277" y="303">90</text><text x="245" y="380">150</text><text x="168" y="397">180</text><text x="91" y="380">210</text><text x="60" y="303">270</text><text x="91" y="226">330</text></g>
+<!-- radar cone toward Jerusalem (~62°) -->
+<path d="M 168 300 L 277 225 A 130 130 0 0 1 300 280 Z" fill="url(#cone)"/>
+<!-- cardinals -->
+<text x="168" y="233" font-size="14" fill="#E05A4E" text-anchor="middle" font-weight="600">צ</text>
+<text x="252" y="305" font-size="14" fill="#cdd8ea" text-anchor="middle" font-weight="600">מז</text>
+<text x="168" y="377" font-size="14" fill="#cdd8ea" text-anchor="middle" font-weight="600">ד</text>
+<text x="84" y="305" font-size="14" fill="#cdd8ea" text-anchor="middle" font-weight="600">מע</text>
+<!-- gold marker + needle -->
+<line x1="278" y1="248" x2="266" y2="256" stroke="#E7B53D" stroke-width="4"/>
+<text x="248" y="262" font-size="11" fill="#E7B53D" text-anchor="middle" font-weight="600">ירושלים</text>
+<polygon points="240,255 175,300 145,308 162,288" fill="#E7B53D"/>
+<!-- hub -->
+<circle cx="168" cy="300" r="40" fill="#0d1730" stroke="#2a3a60"/>
+<text x="168" y="298" font-size="24" fill="#fff" text-anchor="middle" font-weight="500">62°</text>
+<text x="168" y="318" font-size="11" fill="#8ea0c4" text-anchor="middle">ירושלים</text>
+<!-- info card -->
+<rect x="14" y="474" width="308" height="52" rx="14" fill="#fff" stroke="#E6EDF4"/>
+<text x="296" y="496" font-size="14" fill="#1B3A5C" text-anchor="end" font-weight="500">ירושלים — הר הבית</text>
+<text x="296" y="512" font-size="11" fill="#7A8CA3" text-anchor="end">כוון את ראש המכשיר לצפון</text>
+<text x="28" y="496" font-size="17" fill="#1B3A5C" text-anchor="start" font-weight="500">62°</text>
+<text x="28" y="512" font-size="11" fill="#7A8CA3" text-anchor="start">1,245 ק״מ</text>
+<rect x="288" y="490" width="20" height="11" rx="2" fill="#C9A227"/>
+</svg>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TIDHAR — les quatre projets</title><style>
+:root{color-scheme:dark;--bg:#0B0E13;--card:#151A22;--line:rgba(255,255,255,.08);--txt:#EDF1F6;--mute:#9AA6B5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif}
+main{max-width:1060px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:28px;font-weight:600;margin:0 0 6px}
+h2{font-size:21px;font-weight:600;margin:0}
+h3{font-size:14px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:26px 0 12px}
+p{margin:0;color:var(--mute)}
+.intro{max-width:720px;margin-bottom:34px}
+section{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;margin-top:22px}
+.tete{display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:99px;flex:none}
+.badge{font-size:12px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+a.btn{display:inline-flex;flex-direction:column;padding:12px 16px;border-radius:14px;text-decoration:none;color:var(--txt);background:rgba(255,255,255,.06);border:1px solid var(--line);min-width:200px}
+a.btn:hover{background:rgba(255,255,255,.11)}
+a.btn b{font-weight:600;font-size:15px}
+a.btn span{font-size:12.5px;color:var(--mute)}
+a.btn.main{border-color:var(--acc)}
+.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+figure{margin:0}
+figure a{display:block;border-radius:14px;overflow:hidden;background:#000;border:1px solid var(--line)}
+figure img{display:block;width:100%;height:190px;object-fit:contain}
+figcaption{font-size:12.5px;color:var(--mute);margin-top:6px}
+footer{margin-top:36px;font-size:13px;color:var(--mute)}
+footer a{color:var(--txt)}
+@media (max-width:600px){a.btn{min-width:0;flex:1 1 100%}}
+</style></head>
+<body><main>
+<h1>TIDHAR — les quatre projets</h1>
+<p class="intro">Horloges non linéaires tirées du brevet WO 2010/013230 « Nonlinear Timer ».
+Un tour de cadran = un cycle réel ; l'arc intérieur ne montre que la fenêtre en cours, et sa
+partie colorée est le temps qui reste. Chaque maquette contient le <b>téléphone et la montre</b>
+(la montre se trouve à côté du téléphone dans la maquette).</p>
+
+<section style="--acc:#4FC5F1">
+  <div class="tete"><span class="dot" style="background:#4FC5F1"></span><h2>הַתָּדִיר — HaTidhar</h2>
+    <span class="badge">zmanim · app native en cours</span></div>
+  <p>Le seul produit avec du code natif (iPhone, Apple Watch, Android, Wear OS, TV).
+  L'app web ci-dessous est compilée depuis le vrai code ; la maquette est la cible du design.</p>
+  <div class="btns">
+    <a class="btn main" href="hatadhar/app/"><b>Application (version web)</b><span>le vrai code, compilé pour le navigateur</span></a>
+    <a class="btn" href="hatadhar/maquette.html"><b>Maquette validée</b><span>téléphone + montre, la cible du design</span></a>
+    <a class="btn" href="hatadhar/captures.html"><b>Planche de contact</b><span>toutes les captures natives, avant / après chaque lot</span></a>
+  </div>
+  <h3>Les montres — app native</h3><div class="grille"><figure><a href="img/montre-apple.png" target="_blank"><img src="img/montre-apple.png" alt="Apple Watch — app native, 13 août (ancienne palette, avant le lot 11)" loading="lazy"></a><figcaption>Apple Watch — app native, 13 août (ancienne palette, avant le lot 11)</figcaption></figure><figure><a href="img/montre-wear.png" target="_blank"><img src="img/montre-wear.png" alt="Wear OS — app native, 13 août (ancienne palette)" loading="lazy"></a><figcaption>Wear OS — app native, 13 août (ancienne palette)</figcaption></figure></div>
+  <h3>Les quatre cadrans du brevet — app native</h3><div class="grille"><figure><a href="img/cadran-classique.png" target="_blank"><img src="img/cadran-classique.png" alt="Cadran Classique" loading="lazy"></a><figcaption>Cadran Classique</figcaption></figure><figure><a href="img/cadran-sofer.png" target="_blank"><img src="img/cadran-sofer.png" alt="Cadran Sofer" loading="lazy"></a><figcaption>Cadran Sofer</figcaption></figure><figure><a href="img/cadran-carre.png" target="_blank"><img src="img/cadran-carre.png" alt="Cadran Carré" loading="lazy"></a><figcaption>Cadran Carré</figcaption></figure><figure><a href="img/cadran-analogique.png" target="_blank"><img src="img/cadran-analogique.png" alt="Cadran Analogique" loading="lazy"></a><figcaption>Cadran Analogique</figcaption></figure></div>
+  <h3>Téléphones — app native</h3><div class="grille"><figure><a href="img/iphone.png" target="_blank"><img src="img/iphone.png" alt="iPhone — app native (simulateur)" loading="lazy"></a><figcaption>iPhone — app native (simulateur)</figcaption></figure><figure><a href="img/android.png" target="_blank"><img src="img/android.png" alt="Android — app native, thème sombre" loading="lazy"></a><figcaption>Android — app native, thème sombre</figcaption></figure></div>
+</section>
+
+<section style="--acc:#2FBF9B">
+  <div class="tete"><span class="dot" style="background:#2FBF9B"></span><h2>الأوقات — Al-Awqat</h2>
+    <span class="badge">cinq prières · maquette</span></div>
+  <p>Pas encore de code natif : il sera dérivé de HaTidhar une fois celui-ci terminé.</p>
+  <div class="btns"><a class="btn main" href="al-awqat/maquette.html"><b>Maquette validée</b><span>téléphone + montre</span></a></div>
+</section>
+
+<section style="--acc:#FF8A5B">
+  <div class="tete"><span class="dot" style="background:#FF8A5B"></span><h2>Kairos</h2>
+    <span class="badge">horloge biologique · maquette</span></div>
+  <p>Pas encore de code natif : il sera dérivé de HaTidhar une fois celui-ci terminé.</p>
+  <div class="btns"><a class="btn main" href="kairos/maquette.html"><b>Maquette validée</b><span>téléphone + montre</span></a></div>
+</section>
+
+<section style="--acc:#B9A2FF">
+  <div class="tete"><span class="dot" style="background:#B9A2FF"></span><h2>Sources</h2>
+    <span class="badge">références</span></div>
+  <p>Les écrans dessinés d'origine, dont les écrans de montre watchOS. Les références visuelles de tiers restent dans le dépôt privé.</p>
+  <div class="btns"><a class="btn main" href="sources/"><b>Écrans dessinés d'origine</b><span>SVG des écrans téléphone et montre</span></a></div>
+</section>
+
+<footer>Code et documentation : dépôts GitHub privés
+<a href="https://github.com/Azmer-FTS/HaTidhar-Clock">HaTidhar-Clock</a> ·
+<a href="https://github.com/Azmer-FTS/al-awqat">al-awqat</a> ·
+<a href="https://github.com/Azmer-FTS/kairos">kairos</a> ·
+<a href="https://github.com/Azmer-FTS/tidhar-sources">tidhar-sources</a>.
+Pour reprendre le projet : <code>PASSATION.md</code> dans HaTidhar-Clock.</footer>
+</main></body></html>
