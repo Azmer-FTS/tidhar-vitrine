@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TIDHAR — Direction 2 (proposition)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500&family=Fraunces:opsz,wght@9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=Noto+Naskh+Arabic:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="d2.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <b>TIDHAR</b>
+  <nav class="tabs" aria-label="Sections">
+    <a href="../">Aujourd’hui</a>
+    <a href="./" aria-current="page">Direction 2</a>
+  </nav>
+</div></header>
+
+<main>
+<section class="intro wrap">
+  <h1>Le temps qui reste, lisible d’un coup d’œil.</h1>
+  <p><strong>Ceci est une proposition, pas une décision.</strong> Elle reprend les trois produits, sur la montre et le téléphone, sans rien changer à la grammaire du brevet WO 2010/013230 : un tour est un cycle, l’encoche du haut est l’ancre, l’anneau est le cycle qui se consomme, l’arc intérieur est la fenêtre en cours et sa partie colorée est le temps restant.</p>
+  <p>Ce qui change, c’est tout ce qu’il y a autour : ce qu’on lit en premier, la matière du cadran, et ce que la montre sait faire au quotidien. Rien n’a été modifié dans l’application : ce sont des maquettes.</p>
+  <p class="note">Les maquettes ci-dessous sont vivantes. Les horaires sont calculés à partir de la position réelle du soleil, pour la ville et l’instant choisis. Faites glisser l’heure, changez de produit, touchez le cadran, les onglets et la montre.</p>
+</section>
+
+<div class="controls"><div class="wrap">
+  <div class="seg" role="group" aria-label="Produit">
+    <button data-prod="hatadhar" lang="he">הַתָּדִיר</button>
+    <button data-prod="awqat" lang="ar">الأوقات</button>
+    <button data-prod="kairos">Kairos</button>
+  </div>
+  <label class="time"><span class="h-small" style="margin:0">Heure</span><input id="t" type="range" min="0" max="1439" step="1" aria-label="Heure de la journée"><output id="tout" for="t"></output></label>
+  <button class="chip" data-go="now">Maintenant</button>
+  <button class="chip" data-go="play" aria-pressed="false">Lecture</button>
+  <button class="chip" data-go="end">Fin de fenêtre</button>
+  <button class="chip" data-go="fri">Vendredi</button>
+  <button class="chip" data-go="theme" aria-pressed="false">Thème clair</button>
+</div></div>
+
+<section class="wrap">
+  <p class="cap" style="margin-top:18px"><b id="cityOut"></b>. La ville, l’opinion ou la méthode de calcul se changent dans le dernier onglet du téléphone.</p>
+  <div class="stage p" id="stage" data-p="hatadhar" data-theme="dark">
+    <div>
+      <div id="phone"></div>
+    </div>
+    <div class="side">
+      <div class="watchrow">
+        <div id="watch"></div>
+        <div style="flex:1;min-width:220px">
+          <p class="h-small">La montre d’abord</p>
+          <p class="cap" style="margin-top:0">Le ciel est derrière le cadran, sur la montre seulement. Touchez le cadran : il se retourne en boussole, à sa taille pleine. Glissez, ou utilisez les trois boutons, pour passer d’un écran à l’autre.</p>
+          <p class="cap">Sur une vraie montre, <b>la couronne fait défiler la journée</b> : on voit d’avance où tombera chaque fenêtre.</p>
+        </div>
+      </div>
+      <div class="surfaces" id="surfaces"></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap prose">
+
+  <!-- ===== HaTidhar ===== -->
+  <div data-for="hatadhar">
+    <h2 class="ptitle"><i style="background:#4FC5F1"></i>הַתָּדִיר : ce que cette direction change</h2>
+    <div class="tablewrap"><table class="cmp">
+      <tr><th></th><th>Aujourd’hui</th><th>Direction 2</th></tr>
+      <tr><td>Ce qu’on lit d’abord</td><td>Un cadran, puis il faut chercher ce qu’il veut dire.</td><td>Trois lectures, trois endroits : le nom de la fenêtre en titre, le temps restant au centre, l’heure limite juste dessous.</td></tr>
+      <tr><td>L’anneau</td><td>Un dégradé qui évoque la lumière.</td><td>Chaque point de l’anneau porte la couleur que le ciel avait à cet instant. Le soleil, ou la lune avec sa phase réelle, marque le présent.</td></tr>
+      <tr><td>Les fenêtres</td><td>On ne voit que la fenêtre en cours.</td><td>Toujours la seule fenêtre en cours dans l’arc, mais de petits repères sur l’anneau montrent où les autres commencent, et un trait marque l’instant où celle-ci se ferme.</td></tr>
+      <tr><td>La montre</td><td>Le cadran, la liste, la fiche du jour.</td><td>Les trois mêmes écrans, plus la complication, la pile intelligente, l’écran toujours allumé et l’activité en direct, tous dessinés par le même moteur.</td></tr>
+    </table></div>
+
+    <h3>Fonctions proposées</h3>
+    <div class="two">
+      <ul>
+        <li><b>Des alarmes qui suivent le soleil.</b> « 30 minutes avant la fin du temps du Shema » : l’heure change chaque jour, l’alarme aussi. Visible dans l’onglet Alertes.</li>
+        <li><b>Le mode Chabbat sur la montre.</b> Écran passif, aucun son, aucune vibration, rien à toucher. Je n’ai trouvé aucune application qui le fasse sur une montre. Il faut l’avis du Rav sur un écran allumé qui change.</li>
+        <li><b>Le temps restant en complication.</b> Les applications existantes affichent un texte ou un compte à rebours. L’arc du brevet, sur le cadran de la montre, n’existe nulle part.</li>
+        <li><b>L’activité en direct, la dernière heure.</b> Fin du Shema, allumage des bougies : le compte à rebours reste sur l’écran verrouillé sans ouvrir l’application.</li>
+      </ul>
+      <ul>
+        <li><b>L’opinion affichée à côté de l’heure.</b> Gra ou Magen Avraham, nommée, modifiable. Essayez dans le dernier onglet : le cadran se recalcule.</li>
+        <li><b>Au poignet, ce que personne ne propose :</b> la fenêtre de Kiddouch Levana, le compte du Omer le soir, le début et la fin des jeûnes.</li>
+        <li><b>La prudence écrite.</b> « Ne pas se fier aux horaires jusqu’à la dernière minute », et des heures limites arrondies dans le sens prudent, comme le font les références du domaine.</li>
+        <li><b>Partager les horaires du jour</b> en une image, pour le groupe de la synagogue. C’est une idée, pas une observation du marché.</li>
+      </ul>
+    </div>
+    <h3>Modèle</h3>
+    <p>Inchangé : <b>gratuit, sans publicité, soutenu par le don</b>. Proposition à valider avec le Rav : permettre de <b>dédier un jour</b> (à la mémoire d’un proche, pour une guérison), comme forme de don. L’offre synagogue sur grand écran reste payante, comme déjà décidé.</p>
+    <h3>À trancher</h3>
+    <ul>
+      <li>L’opinion par défaut, par communauté, et si son nom apparaît sur le cadran.</li>
+      <li>Le mode Chabbat sur la montre : avis rabbinique.</li>
+      <li>La dédicace d’un jour : oui ou non, et sa formulation.</li>
+      <li>Les textes en hébreu de ces maquettes sont à relire par vous.</li>
+    </ul>
+  </div>
+
+  <!-- ===== Al-Awqat ===== -->
+  <div data-for="awqat" hidden>
+    <h2 class="ptitle"><i style="background:#2FBF9B"></i>الأوقات : ce que cette direction change</h2>
+    <p>Même cadran, même grammaire. La particularité de ce produit est ailleurs : <b>les horaires ne sont pas les mêmes pour tous les musulmans</b>, et l’application doit le respecter sans jamais donner l’impression de prendre parti.</p>
+    <h3>Sunnites et chiites : faut-il s’en occuper ?</h3>
+    <p><b>Oui, mais c’est un réglage, pas deux applications.</b> Quatre différences touchent directement le cadran :</p>
+    <ul>
+      <li><b>Les angles de calcul.</b> L’aube et la nuit sont définies par la hauteur du soleil sous l’horizon, et chaque institution a la sienne (Ligue islamique mondiale, Umm al-Qura, Égypte, Amérique du Nord, Téhéran, Qom…). L’écart peut dépasser vingt minutes.</li>
+      <li><b>L’Asr.</b> L’école hanafite le place plus tard que les trois autres écoles sunnites et que l’école jaʿfarite.</li>
+      <li><b>Le Maghrib chiite</b> commence quelques minutes après le coucher du soleil, quand la rougeur de l’est a disparu.</li>
+      <li><b>Les prières regroupées.</b> Dans la tradition jaʿfarite, Dhuhr et Asr partagent une seule fenêtre, comme Maghrib et Isha. Le cadran doit alors montrer <b>trois fenêtres au lieu de cinq</b>. Essayez : dernier onglet, méthode « الجعفري ».</li>
+    </ul>
+    <p>L’usage des applications sérieuses est de présenter cela comme une <b>« méthode de calcul » nommée par son institution</b>, jamais comme une étiquette religieuse posée sur l’utilisateur. L’appel à la prière a aussi une formulation différente : le son doit être au choix.</p>
+    <h3>Fonctions proposées</h3>
+    <div class="two">
+      <ul>
+        <li><b>L’alerte avant la fin du temps.</b> C’est la valeur du brevet : prévenir quand une prière va sortir de son temps, pas seulement quand elle commence. Je ne l’ai trouvée dans aucune application.</li>
+        <li><b>La qibla au retournement du cadran</b>, avec une vibration quand le poignet est dans l’axe.</li>
+        <li><b>Le tasbih sur la montre</b> : un appui, une vibration, compteur à 33. Essayez sur le troisième écran de la montre.</li>
+        <li><b>« J’ai prié »</b> en un appui, avec un suivi privé et facultatif, et une pause discrète quand la prière n’est pas due.</li>
+      </ul>
+      <ul>
+        <li><b>Le mode Ramadan</b> : fin du souhour et rupture du jeûne en compte à rebours ; l’imsak en option, car il n’est pas reconnu par tous.</li>
+        <li><b>Le calendrier hégirien réglable</b> d’un ou deux jours, selon l’observation locale de la lune.</li>
+        <li><b>Les chiffres au choix</b> : ١٢٣ ou 123, selon la région.</li>
+        <li><b>Couper le son de la prochaine prière</b> d’un geste, pour une réunion.</li>
+      </ul>
+    </div>
+    <h3>Modèle</h3>
+    <p><b>L’achat unique à vie, déjà décidé, est le bon choix.</b> Dans ce marché, la publicité près d’un acte de culte est très mal vécue, et les utilisateurs se souviennent de l’affaire de 2020 : une application de prière très connue transmettait la position de ses utilisateurs à un courtier en données. D’où une promesse à écrire en toutes lettres : <b>votre position ne quitte jamais votre téléphone.</b></p>
+    <p>Un point à revoir : l’écran de mosquée payant. Le service le plus répandu pour cela est gratuit et se présente comme une œuvre pieuse. Vendre cet écran sera difficile.</p>
+    <h3>À trancher</h3>
+    <ul>
+      <li>Quelle fin montrer pour l’Asr et l’Isha : la fin recommandée, la fin absolue, ou les deux.</li>
+      <li>La méthode par défaut de chaque pays, là où les autorités ne sont pas d’accord (France, Malaisie, Indonésie).</li>
+      <li><b>Faire relire les réglages par un savant sunnite et un savant chiite</b> avant toute sortie.</li>
+      <li>Les textes arabes de ces maquettes sont les miens : ils doivent être relus par une personne dont c’est la langue.</li>
+    </ul>
+  </div>
+
+  <!-- ===== Kairos ===== -->
+  <div data-for="kairos" hidden>
+    <h2 class="ptitle"><i style="background:#FF8A5B"></i>Kairos : ce que cette direction change</h2>
+    <p>Ici le tour de cadran va <b>du réveil au réveil</b>. L’anneau garde la couleur réelle du ciel : si vous vous levez avant le jour ou veillez tard, l’écart entre votre corps et le soleil se voit immédiatement.</p>
+    <div class="two">
+      <ul>
+        <li><b>Plus de chronotypes à noms d’animaux.</b> Ils n’ont pas de valeur scientifique reconnue. On demande simplement l’heure habituelle du réveil ; tout le cycle en découle.</li>
+        <li><b>« Fenêtre de sommeil », pas « mélatonine ».</b> Sans mesure, ce serait une promesse médicale. Kairos donne des repères, pas un diagnostic.</li>
+      </ul>
+      <ul>
+        <li><b>Quatre repères par jour</b> au lieu d’un tableau de bord : la lumière du matin, la dernière caféine, le creux de l’après-midi, les écrans le soir.</li>
+        <li><b>Le plan de décalage horaire</b>, vendu au voyage : c’est le modèle que les utilisateurs disent trouver le plus juste chez le concurrent de référence.</li>
+      </ul>
+    </div>
+    <h3>Modèle</h3>
+    <p>Inchangé : essai de 7 jours que l’on démarre soi-même, sans reconduction, puis 4,99 € par mois ou 34,99 € par an. Ce prix se situe entre le concurrent le moins cher (environ 20 $ par an) et les plus connus (environ 70 $ par an). Le leader du marché est critiqué pour son abonnement annuel imposé : <b>dire clairement que rien n’est prélevé à la fin de l’essai est un avantage</b>, montré dans le dernier onglet.</p>
+    <h3>À trancher</h3>
+    <ul>
+      <li>Ce qui reste gratuit après l’essai.</li>
+      <li>Un tarif « à vie » en plus de l’abonnement.</li>
+      <li>La formulation de chaque conseil : aucun mot qui évoque un soin ou une maladie.</li>
+    </ul>
+  </div>
+
+  <h2>Ce qui est commun aux trois</h2>
+  <div class="two">
+    <ul>
+      <li><b>Une seule famille de caractères</b> pour l’hébreu, l’arabe et le français (IBM Plex Sans, dessinée dans les trois écritures). Chaque produit a sa propre fonte de titre : c’est sa voix.</li>
+      <li><b>Un fond, une encre, un accent.</b> Le cyan, l’émeraude et le corail de chaque produit ne servent qu’au temps restant et à l’action principale. La seule autre couleur est celle du ciel.</li>
+      <li><b>Le même objet partout.</b> Téléphone, montre, complication, écran verrouillé : c’est le même cadran, avec plus ou moins de détail.</li>
+    </ul>
+    <ul>
+      <li><b>Les décisions déjà prises sont respectées</b> : cinq onglets, la boussole par retournement, le ciel réservé à la montre, aucune donnée superposée, aucune ligne de rappel.</li>
+      <li><b>Les quatre cadrans du brevet restent.</b> Cette direction en montre deux variantes (épuré, et avec les heures) ; Carré et Analogique recevraient la même matière.</li>
+      <li><b>Thème clair et sombre</b>, bouton en haut de la page.</li>
+    </ul>
+  </div>
+
+  <h2>Ce que cette maquette ne couvre pas encore</h2>
+  <ul>
+    <li>Le calendrier complet, l’assistant de démarrage, la tablette et le grand écran de synagogue ou de mosquée. Ils seront déclinés une fois la direction choisie.</li>
+    <li>La boussole est simulée : une page web ne lit pas l’orientation de l’appareil.</li>
+    <li>Les valeurs servent à juger l’interface. Elles ne remplacent pas un calendrier validé.</li>
+  </ul>
+
+  <h2>D’où viennent ces choix</h2>
+  <p class="refs">Écrans regardés sur Mobbin avant de dessiner, et ce que j’en ai retenu :</p>
+  <ul class="refs">
+    <li><a href="https://mobbin.com/screens/e37f48a3-fb38-43c3-86b4-2ba29608408d?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Lumy</a> : une phrase d’abord (« Lever du soleil dans 1 h 49 »), le dessin ensuite. Et son <a href="https://mobbin.com/screens/6c285ffd-a76e-4528-a227-7ca21df20cd8?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">cadran de 24 heures</a> coloré par la lumière.</li>
+    <li><a href="https://mobbin.com/screens/1f019d93-6fbe-4045-913a-b7ade4aaa244?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Ultrahuman</a> : « se termine dans 05:23:44 » au centre du cadran. La même idée que le brevet, sans sa rigueur.</li>
+    <li><a href="https://mobbin.com/screens/bec4df6a-6802-4420-b152-bd41609ca8da?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Oura</a> et <a href="https://mobbin.com/screens/623a0ad4-5b2d-4c22-863c-2b62fe74d151?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Bevel</a> : deux anneaux concentriques, chacun avec un seul rôle.</li>
+    <li><a href="https://mobbin.com/screens/cee3304b-1709-427f-8ac4-7df615080050?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Moonlitt</a> et <a href="https://mobbin.com/screens/1ca50d0b-14d0-4d4f-a142-403869ef00ab?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Yazio</a> : l’écran verrouillé et les widgets, réduits à un nom et un temps.</li>
+    <li><a href="https://mobbin.com/screens/a07ff209-a9e2-4f29-96f3-0b41febcd304?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">AllTrails</a> et <a href="https://mobbin.com/screens/34684e50-5ba5-4b94-9df3-982c2f589876?utm_source=claude&utm_medium=ai-assistant&utm_source_platform=mcp">Ladder</a> : l’essai gratuit expliqué jour par jour.</li>
+  </ul>
+  <p>S’y ajoutent deux études du marché faites le 26 novembre 2026 sur les fiches publiques des applications de zmanim, de prière et de rythme circadien, et sur la documentation d’Apple et de Google. Leurs sources sont consignées dans le dépôt du projet (<code>design/direction-2/RECHERCHE.md</code>).</p>
+
+  <div class="decide">
+    <h2>La décision à prendre</h2>
+    <ul>
+      <li><b>Garder la version actuelle</b> telle qu’elle est : <a href="../hatadhar/maquette.html">הַתָּדִיר</a>, <a href="../al-awqat/maquette.html">الأوقات</a>, <a href="../kairos/maquette.html">Kairos</a>.</li>
+      <li><b>Adopter la Direction 2</b> : nouvelle lecture, nouvelle matière du cadran, nouvelles fonctions de montre.</li>
+      <li><b>Prendre le meilleur des deux</b> : par exemple la lecture en trois endroits et l’anneau de lumière réelle, sur les écrans actuels.</li>
+    </ul>
+    <p>Dans les trois cas le brevet et les décisions déjà prises restent intacts. Rien ne sera porté dans l’application avant votre choix.</p>
+  </div>
+</section>
+</main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
