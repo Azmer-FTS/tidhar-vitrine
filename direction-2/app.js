@@ -18,7 +18,10 @@
   function P() { return T.PRODUCTS[S.p]; }
   function L() { return I.STR[P().lang]; }
   function tz() { return T.CITIES[cfg().city].tz; }
-  function win(w) { return I.WIN[w.id] || { ic: 'clock', what: '' }; }
+  function win(w) { var x = I.WIN[w.id] || { ic: 'clock', what: '' };
+    // À la sortie de Chabbat, la fenêtre du crépuscule mène à la sortie de Chabbat, pas « aux étoiles ».
+    if (w.id === 'bein' && w.endLabel === 'צאת השבת') return { ic: 'havdala', what: 'עד צאת השבת', act: x.act };
+    return x; }
 
   /* ---------- formats ---------- */
   var fc = {};
