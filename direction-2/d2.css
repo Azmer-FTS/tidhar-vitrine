@@ -692,3 +692,75 @@ body.embed .wrap{padding:0 12px}
 .card.flat{box-shadow:none;background:var(--s2);border:0;-webkit-backdrop-filter:none;backdrop-filter:none}
 .card.flat b{display:block;font-weight:600}
 @media (prefers-reduced-motion:reduce){.mday{animation:none}}
+
+/* =====================================================================================
+   Itération 6 : plus rien ne saute, le verre partout, vue Jour, premier lancement, tablette.
+   ===================================================================================== */
+/* --- rien ne se rejoue quand on touche : les animations d'entrée ne jouent qu'à l'arrivée d'un écran --- */
+.sheet.still,.scrim.still,.onb.still{animation:none}
+.mday{animation:none}
+.scr.enter .mday{animation:tin .4s var(--ease) both}
+.next>.tile{animation:none}
+.next.fresh>.tile,.phone.arriving .next>.tile{animation:tin .55s var(--ease) both}
+
+/* --- le verre, sur tous les écrans : feuilles, listes, calendrier, choix --- */
+.p{--sheetg:rgba(13,19,35,.80)}
+.p[data-theme=light]{--sheetg:rgba(246,247,251,.80)}
+.sheet{background:linear-gradient(165deg,rgba(255,255,255,.16),rgba(255,255,255,0) 42%),var(--sheetg);-webkit-backdrop-filter:blur(30px) saturate(1.6);backdrop-filter:blur(30px) saturate(1.6);
+  border:1px solid var(--rim);border-bottom:0;box-shadow:inset 0 1.5px 0 var(--shine),0 -18px 50px rgba(0,0,0,.30)}
+.sheet::before{content:"";display:block;width:38px;height:5px;border-radius:9px;background:var(--mute);opacity:.45;margin:-8px auto 12px}
+.opt,.inp,.seg2,.card.flat,.xbtn,.mday,.addrow{background-image:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,0) 62%);border:1px solid var(--rim);box-shadow:inset 0 1px 0 var(--shine)}
+.addrow{border-style:dashed;border-color:var(--mute);box-shadow:none}
+.mday{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mday.sel{border-color:transparent}
+.list.glassy,.sgroup{-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4)}
+.list.glassy{border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,0) 60%),var(--s);border:1px solid var(--rim);box-shadow:inset 0 1px 0 var(--shine),var(--shadow);padding:2px 14px}
+.list.glassy li:last-child{border-bottom:0}
+.list.glassy li.cur{margin:8px -6px;background:var(--s2);box-shadow:inset 0 1px 0 var(--shine)}
+.sgroup.alg{padding:0 14px}
+.sgroup.alg .al:last-child{border-bottom:0}
+.linkbtn{display:inline-flex;align-items:center;gap:7px;min-height:44px;margin-top:6px;padding:0 4px;color:var(--acct);font-size:14.5px;font-weight:600}
+.linkbtn svg{width:16px;height:16px}
+
+/* --- la vue Jour --- */
+.srow .slab b{display:block;font-weight:600}
+.srow .slab small{display:block;font-size:13px;color:var(--mute);margin-top:1px;white-space:normal}
+.srow time{font-variant-numeric:tabular-nums;font-weight:600;direction:ltr;flex:none}
+div.srow{cursor:default}
+div.srow:active{background:none}
+.sgroup.mine .sico{background:linear-gradient(150deg,#FFEBAE,#F2B02E);color:#3A2800}
+.sgroup.tl .srow{min-height:50px}
+.sgroup.tl .ri{width:32px;height:32px}
+.seg2 button{padding:0 16px}
+
+/* --- le premier lancement : une vitre sur le ciel vivant --- */
+.onb{position:absolute;inset:0;z-index:15;display:flex;flex-direction:column;padding:58px 22px 26px;border-radius:inherit;background:var(--pane);-webkit-backdrop-filter:blur(26px) saturate(1.3);backdrop-filter:blur(26px) saturate(1.3);animation:fade .45s both}
+.onb-top{display:flex;align-items:center;justify-content:space-between;min-height:44px}
+.onb-top button{min-height:44px;padding:0 6px;color:var(--mute);font-size:15px;font-weight:500}
+.onb-dots{display:flex;gap:6px}
+.onb-dots i{width:7px;height:7px;border-radius:9px;background:var(--ink);opacity:.28;transition:width .3s var(--ease),opacity .3s}
+.onb-dots i.on{width:22px;opacity:1}
+.onb-body{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;animation:scrin .5s var(--ease) both;--dx:0px;padding-bottom:10px}
+.onb-body::-webkit-scrollbar{display:none}
+.onb .ttl{font-size:31px;margin:10px 0 8px}
+.onb .sub{margin:0 0 6px;color:var(--mute)}
+.onb-dial{width:206px;height:206px;margin:18px auto 14px;padding:10px;border-radius:50%;background:linear-gradient(155deg,rgba(255,255,255,.16),rgba(255,255,255,0) 46%),var(--s);border:1px solid var(--rim);box-shadow:inset 0 1.5px 1px var(--shine),var(--shadow)}
+.onb-leg{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.onb-leg li{display:flex;align-items:center;gap:12px;font-size:16px;line-height:1.4}
+.onb-leg i{flex:none;width:34px;height:10px;border-radius:9px}
+.onb-leg .k1{background:linear-gradient(90deg,#F2A65A,#7EC2F5,#3E7FD6)}
+.onb-leg .k2{background:var(--acc)}
+.onb .cta{margin-top:10px;min-height:54px;font-size:17px;border-radius:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),var(--shadow)}
+.onb .opts+.opts{margin-top:18px}
+
+/* --- tablette --- */
+.surface.wide{grid-column:1/-1}
+.tabl{position:relative;aspect-ratio:4/3;max-width:560px;border-radius:26px;overflow:hidden;background:var(--skybg,#000);box-shadow:0 0 0 8px #050608,0 0 0 9px #2A2D35,0 30px 60px rgba(0,0,0,.5);margin:8px;container-type:inline-size}
+.tabl-in{position:absolute;inset:0;z-index:1;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:20px;align-items:center;padding:24px}
+.tabl-dial .dialbox{width:100%;margin:0}
+.tabl-side{display:grid;gap:12px;justify-items:start;min-width:0}
+.tabl-side .sgroup{width:100%;margin:0;padding:6px 12px}
+.tabl .center strong{font-size:clamp(30px,9cqw,52px)}
+.tabl .center .what{font-size:clamp(12px,2.9cqw,16px)}
+@media (max-width:520px){.tabl-in{grid-template-columns:minmax(0,1fr);padding:16px}.tabl-side{display:none}.tabl{aspect-ratio:1}}
+@media (prefers-reduced-motion:reduce){.onb,.onb-body,.scr.enter .mday,.next.fresh>.tile{animation:none}}

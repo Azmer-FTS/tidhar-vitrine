@@ -10,7 +10,7 @@
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
   /* ---------- état ---------- */
-  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0, intro: 1, calView: 'month', calSel: null, calMon: null, draft: { type: 'bday', remind: 'eve', name: '' },
+  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0, intro: 1, onb: null, calView: 'month', calSel: null, calMon: null, draft: { type: 'bday', remind: 'eve', name: '' },
             events: [{ type: 'azkara', name: 'סבא יצחק ז״ל', m: 'Kislev', d: 19, remind: 'eve', demo: 1 }, { type: 'bday', name: 'נועם', m: 'Kislev', d: 22, remind: 'eve', demo: 1 }],
             wx: 0, face: 'sky', sheet: null, flash: false, heading: 0, shabbatOn: false, prayed: {}, off: {},
             cfg: { hatadhar: { city: 'jerusalem', opinion: 'gra', rite: 'edot' }, awqat: { city: 'casablanca', method: 'mwl', asr: 'shafii' }, kairos: { city: 'paris', wake: 7 } } };
@@ -249,19 +249,35 @@
     // Les flèches pointent vers l'extérieur : en hébreu et en arabe, le jour suivant est à gauche.
     var nav = { he: ['היום הקודם', 'היום הבא'], ar: ['اليوم السابق', 'اليوم التالي'], fr: ['Jour précédent', 'Jour suivant'] }[P().lang];
     return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="' + nav[0] + '">' + ic('chev', 'mir flipx') + '</button><div style="text-align:center"><div class="h1 dayline" style="margin:0" data-t="dayline"></div><div class="meta greg" data-h="greg"></div></div>' +
-      '<button data-act="day" data-d="1" aria-label="' + nav[1] + '">' + ic('chev', 'mir') + '</button></div><div data-h="mooncard"></div><ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
+      '<button data-act="day" data-d="1" aria-label="' + nav[1] + '">' + ic('chev', 'mir') + '</button></div><div data-h="mooncard"></div><ul class="list glassy" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
   }
   function scrCal() {
     if (S.p !== 'hatadhar') return '<div class="h1">' + L().week + '</div><p class="meta" data-t="date"></p><div class="wk" data-list="week"></div>';
     var z = tz(), today = calNoon(dayInstant(M)), sel = S.calSel || today, seg = function (v, s) { return '<button data-act="calview" data-v="' + v + '" aria-pressed="' + (S.calView === v) + '">' + s + '</button>'; },
-        head = '<div class="calhead"><div class="seg2" role="group">' + seg('week', 'שבוע') + seg('month', 'חודש') + '</div><button class="fab" data-act="addev" aria-label="הוספת אירוע">' + ic('plus') + '</button></div>';
+        head = '<div class="calhead"><div class="seg2" role="group">' + seg('day', 'יום') + seg('week', 'שבוע') + seg('month', 'חודש') + '</div><button class="fab" data-act="addev" aria-label="הוספת אירוע">' + ic('plus') + '</button></div>';
     if (S.calView === 'week') return head + '<div class="wk" data-list="week"></div>';
+    if (S.calView === 'day') return head + dayView(sel, z);
     var mo = hmonth(S.calMon || sel, z), gm = function (d, o) { o.timeZone = z; return new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', o).format(d); }, d0 = mo.days[0], d1 = mo.days[mo.days.length - 1], ga = gm(d0.date, { month: 'long' }), gb = gm(d1.date, { month: 'long' }), i,
         h = head + '<div class="mnav"><button data-act="mon" data-d="-1" aria-label="החודש הקודם">' + ic('chev', 'mir flipx') + '</button><div><b>' + HMON[mo.m] + ' ' + gem(mo.y % 1000) + '</b><small>' + (ga === gb ? ga : ga + ' – ' + gb) + ' ' + gm(d1.date, { year: 'numeric' }) + '</small></div><button data-act="mon" data-d="1" aria-label="החודש הבא">' + ic('chev', 'mir') + '</button></div><div class="mgrid">' +
           ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'].map(function (x) { return '<span class="dow">' + x + '</span>'; }).join('');
     for (i = 0; i < d0.w.dow; i++) h += '<span></span>';
     mo.days.forEach(function (d) { var ev = dayEvents(d, z); h += '<button class="mday' + (+d.date === +today ? ' today' : '') + (+d.date === +sel ? ' sel' : '') + (d.w.dow === 6 ? ' shab' : '') + '" data-act="calsel" data-t0="' + (+d.date) + '" aria-label="' + hebDate(d.date, z) + '"><b>' + gem(d.h.d).replace(/[׳״]/g, '') + '</b><small>' + d.w.d + '</small><i>' + (ev.hol.length ? '<u></u>' : '') + (ev.mine.length ? '<u class="mine"></u>' : '') + '</i></button>'; });
     return h + '</div>' + agenda(sel, z);
+  }
+  /* La journée, comme dans un agenda : ce qu'elle est, mes événements, puis toutes ses heures. */
+  function dayView(d, z) {
+    var x = T.compute(S.p, d, cfg()), t2 = x.today, ev = dayEvents({ date: d, h: hparts(d, z) }, z), prev = T.compute(S.p, new Date(+d - 864e5), cfg()).today, sum = [],
+        row = function (icn, a, b, tm, cls) { return '<div class="srow' + (cls || '') + '"><span class="sico">' + ic(icn) + '</span><span class="slab"><b>' + a + '</b>' + (b ? '<small>' + b + '</small>' : '') + '</span>' + (tm ? '<time>' + tm + '</time>' : '') + '</div>'; };
+    ev.hol.forEach(function (n) { sum.push(row('cal', n)); });
+    if (t2.dow === 5) sum.push(row('candles', 'ערב שבת', 'הדלקת נרות', hm(t2.candles, z)));
+    if (t2.dow === 6) sum.push(row('havdala', 'שבת קודש', 'צאת השבת', hm(t2.tzet, z)));
+    if (!sum.length) sum.push(row('sun', 'יום חול'));
+    sum.push(row('night', phaseName(x), levana(x).text));
+    return '<div class="mnav"><button data-act="calday" data-d="-1" aria-label="היום הקודם">' + ic('chev', 'mir flipx') + '</button><div><b>' + wdText(x, d) + ' · ' + hebDate(d, z) + '</b><small>' + new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(d) + '</small></div><button data-act="calday" data-d="1" aria-label="היום הבא">' + ic('chev', 'mir') + '</button></div>' +
+      '<p class="lbl">היום בקצרה</p><div class="sgroup">' + sum.join('') + '</div><p class="lbl">האירועים שלי</p>' +
+      (ev.mine.length ? '<div class="sgroup mine">' + ev.mine.map(function (e) { return row(e.type === 'azkara' ? 'flame' : e.type === 'bday' ? 'gift' : 'bell', EVT[e.type] + ' · ' + esc(e.name), remText2(e, prev, z)); }).join('') + '</div>' : '') +
+      '<button class="addrow" data-act="addev">' + ic('plus') + '<span>הוספת יום הולדת, אזכרה או אירוע</span></button>' +
+      '<p class="lbl">זמני היום</p><div class="sgroup tl">' + x.list.map(function (r) { return '<div class="srow">' + rowIc(r[0]) + '<span class="slab">' + esc(r[0]) + '</span><time>' + hm(r[1], z) + '</time></div>'; }).join('') + '</div>';
   }
   function remText2(e, prevT, z) { return e.remind === 'eve' ? 'התראה בערב שלפני, בצאת הכוכבים · ' + hm(prevT.tzet, z) : e.remind === 'morning' ? 'התראה בבוקר היום' : 'התראה שבוע לפני, בערב'; }
   function agenda(d, z) {
@@ -270,10 +286,10 @@
     ev.hol.forEach(function (n) { rows += '<li><span class="ri">' + ic('cal') + '</span><span>' + n + '</span></li>'; });
     ev.mine.forEach(function (e) { rows += '<li class="mine"><span class="ri">' + ic(e.type === 'azkara' ? 'flame' : e.type === 'bday' ? 'gift' : 'bell') + '</span><span><b>' + EVT[e.type] + ' · ' + esc(e.name) + '</b><small>' + remText2(e, prev, z) + '</small></span>' + (e.demo ? '<em>דוגמה</em>' : '') + '</li>'; });
     rows += '<li>' + rowIc(key[0]) + '<span>' + key[0] + '</span><time>' + hm(key[1], z) + '</time></li>';
-    return '<div class="agenda"><div class="aghead"><b>' + wdText(x, d) + ' · ' + hebDate(d, z) + '</b><small>' + new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(d) + '</small></div><ul class="list">' + rows + '</ul>' +
+    return '<div class="agenda"><div class="aghead"><b>' + wdText(x, d) + ' · ' + hebDate(d, z) + '</b><small>' + new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(d) + '</small></div><ul class="list glassy">' + rows + '</ul><button class="linkbtn" data-act="calview" data-v="day">' + ic('list') + '<span>כל היום</span></button>' +
       '<button class="addrow" data-act="addev">' + ic('plus') + '<span>הוספת יום הולדת, אזכרה או אירוע</span></button></div>';
   }
-  function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div data-list="alerts"></div>'; }
+  function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div class="sgroup alg" data-list="alerts"></div>'; }
   function alertRows(m) {
     var z = m.city.tz, t = m.today, k = m.marks, mn = T.MIN;
     if (S.p === 'hatadhar') return [['סוף זמן קריאת שמע', '30 דק׳ לפני · היום ' + hm(new Date(t.sofShema - 30 * mn), z), 1, 'scroll'], ['מנחה', '20 דק׳ לפני השקיעה · היום ' + hm(new Date(t.shkia - 20 * mn), z), 1, 'sunlow'],
@@ -342,9 +358,9 @@
   function renderPhone() {
     var host = $('#phone'), ph = $('.phone', host), prev = ph ? +ph.dataset.scr : -1;
     if (!ph || ph.dataset.pid !== S.p) { prev = -1;
-      host.innerHTML = '<div class="phone" data-pid="' + S.p + '" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<i class="pane"></i><div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr"></div>' + tabs() + '<div data-sheet></div><div class="splash" data-splash hidden></div></div>';
+      host.innerHTML = '<div class="phone" data-pid="' + S.p + '" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<i class="pane"></i><div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr"></div>' + tabs() + '<div data-onb></div><div data-sheet></div><div class="splash" data-splash hidden></div></div>'; S.onb = null;
       ph = $('.phone', host); }
-    var scr = $('.scr', ph); ph.dataset.scr = S.screen; scr.innerHTML = [scrDial, scrLouah, scrCal, scrAlerts, scrMe][S.screen](); scr.scrollTop = 0; $('[data-sheet]', ph).innerHTML = sheetHTML();
+    var scr = $('.scr', ph); ph.dataset.scr = S.screen; var keepTop = prev === S.screen ? scr.scrollTop : 0; scr.innerHTML = [scrDial, scrLouah, scrCal, scrAlerts, scrMe][S.screen](); scr.scrollTop = keepTop; $('[data-sheet]', ph).innerHTML = sheetHTML();
     $$('.tb button', ph).forEach(function (b) { b.setAttribute('aria-selected', +b.dataset.i === S.screen); }); moveBlob(ph, prev >= 0 && prev !== S.screen);
     if (prev >= 0 && prev !== S.screen && !still) { scr.style.setProperty('--dx', ((S.screen > prev ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1) * 28) + 'px'); scr.classList.remove('enter'); void scr.offsetWidth; scr.classList.add('enter'); }
   }
@@ -366,7 +382,8 @@
       '<div class="surface"><h3>Complication et Smart Stack</h3><div class="sfc"' + d + '><div class="row"><div class="mini" data-dial="mini"><span data-svg></span></div><div style="min-width:0"><b data-t="whatShort"></b><small data-t="untilT"></small></div><span class="big" data-h="big"></span></div></div><p class="cap">Sur le cadran de la montre, et remontée d’elle-même dans la pile quand une fenêtre va se fermer.</p></div>' +
       '<div class="surface"><h3>Dynamic Island et écran verrouillé</h3><div class="island"' + d + '><div class="mini" data-dial="mini"><span data-svg></span></div><span data-t="plain"></span></div><div class="sfc"' + d + '><div class="row"><span class="cic" data-ic="win"></span><div><b data-t="whatFull"></b><small data-t="untilL"></small></div></div><div class="bar"><i data-bar></i></div></div><p class="cap">Activité en direct pendant la dernière heure d’une fenêtre. Un appui ouvre la prière du moment.</p></div>' +
       '<div class="surface"><h3>Toujours allumé</h3><div class="aod">' + dialBox('watch', false, 'front', true) + '</div><p class="cap">Écran en veille : même lecture, sans couleur, une mise à jour par minute.</p></div>' +
-      '<div class="surface"><h3>Widget d’accueil</h3><div class="sfc wd"' + d + '><div class="row"><span class="cic" data-ic="win"></span><div><b data-t="whatFull"></b><small data-t="untilL"></small></div></div><ul class="wl" data-list="wlist" style="margin-top:8px"></ul></div><p class="cap">Les prochains repères, sans ouvrir l’application.</p></div>';
+      '<div class="surface"><h3>Widget d’accueil</h3><div class="sfc wd"' + d + '><div class="row"><span class="cic" data-ic="win"></span><div><b data-t="whatFull"></b><small data-t="untilL"></small></div></div><ul class="wl" data-list="wlist" style="margin-top:8px"></ul></div><p class="cap">Les prochains repères, sans ouvrir l’application.</p></div>' +
+      '<div class="surface wide"><h3>Tablette</h3><div class="tabl"' + d + '>' + skyHTML() + '<div class="tabl-in"><div class="tabl-dial">' + dialBox('full', false, 'front') + '</div><div class="tabl-side"><div class="pill ghost" data-t="dayline"></div><div class="sgroup"><ul class="wl" data-list="wlist"></ul></div></div></div></div><p class="cap">Sur une tablette, le cadran et la suite de la journée tiennent côte à côte. Même moteur, même lecture.</p></div>';
   }
 
   /* ---------- peinture ---------- */
@@ -404,7 +421,7 @@
     $$('[data-h]', root).forEach(function (e) { var x = hv[e.dataset.h]; if (x != null && e.innerHTML !== x) e.innerHTML = x; });
     $$('[data-ic]', root).forEach(function (e) { if (e.dataset.cur !== w.ic) { e.dataset.cur = w.ic; e.innerHTML = ic(w.ic); } });
     dials(m, root);
-    var wk = S.p + m.window.id + (+m.window.start); if (root.dataset.wk !== wk) { if (root.dataset.wk && !still) $$('.center', root).forEach(function (c) { c.classList.remove('chg'); void c.offsetWidth; c.classList.add('chg'); }); root.dataset.wk = wk; }
+    var wk = S.p + m.window.id + (+m.window.start); if (root.dataset.wk !== wk) { if (root.dataset.wk && !still) $$('.center', root).forEach(function (c) { c.classList.remove('chg'); void c.offsetWidth; c.classList.add('chg'); }); root.dataset.wk = wk; $$('.next', root).forEach(function (e) { e.classList.add('fresh'); setTimeout(function () { e.classList.remove('fresh'); }, 1100); }); }
     $$('[data-bar]', root).forEach(function (e) { e.style.width = (100 * (1 - m.windowFrac)).toFixed(1) + '%'; });
     var sd = k.plain ? null : skyDraw(k, m);
     $$('[data-sky]', root).forEach(function (e) { e.hidden = !sd; if (!sd) return; if (!e._sky) e._sky = new D2Sky.Sky(e); e._sky.set(sd); });
@@ -417,6 +434,7 @@
       else { var pz = use(G.z.pane), on = { tone: pz.tone, a: pz.tone === 'light' ? 0.5 : 0.3, sink: pz.sink }; ph.style.setProperty('--pane', 'rgba(' + TINT[pz.tone].join(',') + ',' + Math.max(pz.a, 0.62).toFixed(2) + ')'); [sb, scrE, tbE].forEach(function (e) { setZone(e, on, shab); }); } }
     if (ws) { if (S.wscreen === 0) setZone(ws, use(G.z.watch), shab);
       else { var wz = use(G.z.pane); ws.style.setProperty('--pane', 'rgba(' + TINT[wz.tone].join(',') + ',' + Math.max(wz.a, 0.62).toFixed(2) + ')'); setZone(ws, { tone: wz.tone, a: wz.tone === 'light' ? 0.5 : 0.3, sink: wz.sink }, shab); } }
+    var ob = ph && $('.onb', ph), tabl = $('.tabl', root); if (ob) { var oz = G.z.pane; ob.style.setProperty('--pane', 'rgba(' + TINT[oz.tone].join(',') + ',' + Math.max(oz.a, 0.66).toFixed(2) + ')'); setZone(ob, { tone: oz.tone, a: oz.tone === 'light' ? 0.5 : 0.3, sink: oz.sink }, shab); } if (tabl) setZone(tabl, G.z.watch, shab);
     var gEl = $('#gauge'); if (gEl) { var f1 = function (x) { return x.toFixed(1).replace('.', ','); }, okk = mins.ink >= NEED.ink && mins.mute >= NEED.mute && mins.acc >= NEED.acc && mins.sky >= NEED.mute;
       gEl.innerHTML = '<i class="' + (okk ? 'ok' : 'ko') + '"></i>Lisibilité mesurée à cet instant : texte <b>' + f1(mins.ink) + '</b> · texte secondaire <b>' + f1(mins.mute) + '</b> · icônes <b>' + f1(mins.acc) + '</b>' + (mins.sky < 99 ? ' · heure du haut <b>' + f1(mins.sky) + '</b>' : '') + ' <span>(minimums exigés : 7 · 4,5 · 3 · 4,5)</span>'; }
     var dayKey = S.p + JSON.stringify(cfg()) + T.wall(m.now, z).d;
@@ -451,10 +469,23 @@
     el.className = 'splash'; el.hidden = false; ph.classList.add('splashing'); clearTimeout(spT); S.intro = 0; dials(M, $('#stage'));
     spT = setTimeout(function () { el.classList.add('out'); ph.classList.remove('splashing'); ph.classList.add('arriving'); wind(); spT = setTimeout(function () { el.hidden = true; ph.classList.remove('arriving'); }, 1500); }, 2050);
   }
+  var ONB = { he: { t: ['הזמן שנשאר, במבט אחד', 'איפה אתם?', 'הנוסח והשיטה שלכם', 'מה להזכיר לכם?'], b: ['הטבעת החיצונית היא היום שעובר, בצבעי השמיים.', 'הקשת הפנימית היא הזמן שנשאר לחלון הנוכחי.'], s: ['הזמנים מחושבים לפי מיקום השמש אצלכם. המיקום נשאר במכשיר.', 'אפשר לשנות בכל רגע בהגדרות.', 'ההתראות זזות עם השמש, כל יום.'], next: 'המשך', start: 'מתחילים', skip: 'דילוג' },
+    ar: { t: ['الوقت المتبقي بنظرة واحدة', 'أين أنت؟', 'طريقة الحساب', 'بماذا نذكّرك؟'], b: ['الحلقة الخارجية هي اليوم الذي يمضي، بألوان السماء.', 'القوس الداخلي هو الوقت المتبقي للصلاة الحالية.'], s: ['تُحسب الأوقات حسب موقع الشمس عندك. موقعك لا يغادر هاتفك.', 'يمكنك التغيير في أي وقت من الإعدادات.', 'التنبيهات تتحرك مع الشمس كل يوم.'], next: 'التالي', start: 'ابدأ', skip: 'تخطي' },
+    fr: { t: ['Le temps qui reste, d’un coup d’œil', 'Où êtes-vous ?', 'Votre rythme', 'Que faut-il vous rappeler ?'], b: ['L’anneau extérieur, c’est la journée qui passe, aux couleurs du ciel.', 'L’arc intérieur, c’est le temps qui reste à la phase en cours.'], s: ['Les heures suivent le soleil là où vous êtes. Votre position reste sur le téléphone.', 'Modifiable à tout moment dans les réglages.', 'Les rappels suivent votre rythme.'], next: 'Continuer', start: 'Commencer', skip: 'Passer' } };
+  function onbHTML() {
+    if (S.onb == null) return ''; var o = ONB[P().lang], i = S.onb, body = '', list = function (key) { return '<div class="opts">' + OPTS(key).list.map(function (x) { return '<button class="opt" data-act="oset" data-k="' + key + '" data-v="' + x[0] + '" aria-pressed="' + (String(cfg()[key]) === String(x[0])) + '"><span><b>' + x[1] + '</b>' + (x[2] ? '<small>' + x[2] + '</small>' : '') + '</span><i class="radio"></i></button>'; }).join('') + '</div>'; };
+    if (i === 0) body = '<div class="onb-dial">' + dialSVG(M, 'full') + '</div><ul class="onb-leg"><li><i class="k1"></i><span>' + o.b[0] + '</span></li><li><i class="k2"></i><span>' + o.b[1] + '</span></li></ul>';
+    if (i === 1) body = '<p class="sub">' + o.s[0] + '</p>' + list('city');
+    if (i === 2) body = '<p class="sub">' + o.s[1] + '</p>' + (S.p === 'hatadhar' ? list('rite') + list('opinion') : S.p === 'awqat' ? list('method') : list('wake'));
+    if (i === 3) body = '<p class="sub">' + o.s[2] + '</p><div class="sgroup alg">' + alertRows(M).slice(0, 4).map(function (r) { return '<div class="al"><span class="ri">' + ic(r[3]) + '</span><div style="flex:1"><b>' + esc(r[0]) + '</b><small>' + esc(r[1]) + '</small></div>' + sw(r[0], isOn(r[0], !!r[2])) + '</div>'; }).join('') + '</div>';
+    return '<div class="onb"><div class="onb-top"><span class="onb-dots">' + [0, 1, 2, 3].map(function (j) { return '<i' + (j === i ? ' class="on"' : '') + '></i>'; }).join('') + '</span><button data-act="onbskip">' + o.skip + '</button></div><div class="onb-body"><h2 class="ttl">' + o.t[i] + '</h2>' + body + '</div><button class="cta" data-act="onbnext">' + (i === 3 ? o.start : o.next) + '</button></div>';
+  }
+  function onb() { var h = $('#phone [data-onb]'); if (!h) return; var had = $('.onb', h); h.innerHTML = onbHTML(); var n = $('.onb', h); if (n && had) n.classList.add('still'); paint(); }
   function showAudit() { var g = $('#gaugeAll'); if (!g) return; var r = audit(), f = function (x) { return x.toFixed(1).replace('.', ','); };
     g.innerHTML = '<b>' + r.n.toLocaleString('fr-FR') + ' instants testés</b> (toute la journée, toutes les 5 minutes, par temps dégagé, voilé, couvert, de pluie et d’orage). Plus faible contraste mesuré : texte ' + f(r.ink) + ' · texte secondaire ' + f(r.mute) + ' · icônes ' + f(r.acc) + ' · heure en haut de l’écran ' + f(r.sky) + '. ' +
       (r.bad ? '<b class="ko">' + r.bad + ' instants sous le seuil.</b>' : '<b class="ok">Aucun instant sous le seuil.</b>'); }
-  function sheet() { $('[data-sheet]').innerHTML = sheetHTML(); var e = $('[data-text]'); if (!e || tcache[e.dataset.text]) return; var id = e.dataset.text, put = function (h) { var x = $('[data-text="' + id + '"]'); if (x) x.innerHTML = h; };
+  function sheet() { var host = $('[data-sheet]'), was = $('.sheet', host), top = was ? was.scrollTop : 0; host.innerHTML = sheetHTML(); var cur = $('.sheet', host); if (was && cur) { cur.classList.add('still'); cur.scrollTop = top; $('.scrim', host).classList.add('still'); }
+    var e = $('[data-text]'); if (!e || tcache[e.dataset.text]) return; var id = e.dataset.text, put = function (h) { var x = $('[data-text="' + id + '"]'); if (x) x.innerHTML = h; };
     loadText(id).then(function () { put(textHTML(id)); }).catch(function () { put('<span class="meta">לא ניתן לטעון את הטקסט כרגע.</span>'); }); }
 
   /* ---------- interactions ---------- */
@@ -478,6 +509,7 @@
     if (b.dataset.face) { S.face = b.dataset.face; return paint(); }
     if (b.dataset.go === 'play') return S.playing ? stop() : play();
     if (b.dataset.go === 'splash') return splash();
+    if (b.dataset.go === 'onb') { S.onb = 0; return onb(); }
     if (b.dataset.go === 'audit') return showAudit();
     if (b.dataset.go) return go(b.dataset.go);
     if (a === 'tab') { S.screen = +b.dataset.i; S.side = 'front'; S.heading = 0; S.sheet = null; renderPhone(); return paint(); }
@@ -486,13 +518,17 @@
     if (a === 'day') { S.now = new Date(+S.now + b.dataset.d * 864e5); return paint(); }
     if (a === 'goto') { S.now = new Date(+S.now + b.dataset.d * 864e5); S.screen = 1; renderPhone(); return paint(); }
     if (a === 'sw') { var on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); S.off[S.p + b.dataset.k] = on; return; }
-    if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; S.sheet = null; return render(); }
+    if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; S.sheet = null; renderPhone(); return paint(); }
     if (a === 'pick') { S.sheet = 'pick:' + b.dataset.k; return sheet(); }
     if (a === 'calview') { S.calView = b.dataset.v; renderPhone(); return paint(); }
-    if (a === 'calsel') { S.calSel = new Date(+b.dataset.t0); S.calMon = S.calSel; renderPhone(); return paint(); }
+    if (a === 'calsel') { S.calSel = new Date(+b.dataset.t0); S.calMon = S.calSel; $$('.mday.sel').forEach(function (x) { x.classList.remove('sel'); }); b.classList.add('sel'); var ag = $('.phone .agenda'); if (ag) ag.outerHTML = agenda(S.calSel, tz()); return; }
+    if (a === 'calday') { S.calSel = calNoon(new Date(+(S.calSel || calNoon(dayInstant(M))) + b.dataset.d * 864e5)); S.calMon = S.calSel; renderPhone(); return paint(); }
+    if (a === 'oset') { var ov = b.dataset.v; cfg()[b.dataset.k] = isNaN(+ov) ? ov : +ov; $$('[data-act=oset][data-k="' + b.dataset.k + '"]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.v === ov); }); return paint(); }
+    if (a === 'onbnext') { S.onb = S.onb < 3 ? S.onb + 1 : null; return onb(); }
+    if (a === 'onbskip') { S.onb = null; return onb(); }
     if (a === 'mon') { var mo = hmonth(S.calMon || S.calSel || calNoon(dayInstant(M)), tz()); S.calMon = calNoon(new Date(+b.dataset.d > 0 ? +mo.days[mo.days.length - 1].date + 4 * 864e5 : +mo.days[0].date - 4 * 864e5)); renderPhone(); return paint(); }
     if (a === 'addev') { S.sheet = 'addev'; return sheet(); }
-    if (a === 'draft') { S.draft[b.dataset.k] = b.dataset.v; return sheet(); }
+    if (a === 'draft') { S.draft[b.dataset.k] = b.dataset.v; $$('[data-act=draft][data-k="' + b.dataset.k + '"]').forEach(function (x) { x.setAttribute('aria-pressed', x.dataset.v === b.dataset.v); }); var si = $('.sheet .sic'); if (si && b.dataset.k === 'type') si.innerHTML = ic(S.draft.type === 'azkara' ? 'flame' : S.draft.type === 'bday' ? 'gift' : 'bell'); return; }
     if (a === 'evsave') { var ed = S.calSel || calNoon(dayInstant(M)), eh = hparts(ed, tz()); S.events.push({ type: S.draft.type, name: S.draft.name.trim() || EVT[S.draft.type], m: eh.m, d: eh.d, remind: S.draft.remind }); S.draft.name = ''; S.sheet = null; S.calSel = ed; S.screen = 2; S.calView = 'month'; renderPhone(); return paint(); }
     if (a === 'tasbih') { S.tasbih = (S.tasbih + 1) % 34; return paint(); }
     if (a === 'open') { S.sheet = b.dataset.s; S.text = null; S.flash = false; return sheet(); }
