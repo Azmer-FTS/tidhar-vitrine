@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>TIDHAR — Comparer l’ancienne et la nouvelle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@500;600&family=IBM+Plex+Sans+Hebrew:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="d2.css">
+<style>
+  .cmpgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:18px 0 60px}
+  .col h2{font-size:15px;font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .col h2 small{font-weight:400;color:var(--page-mute);font-size:13px}
+  .col iframe{display:block;width:100%;height:1900px;border:1px solid var(--page-line);border-radius:18px;background:#0B0E13}
+  .which{display:none}
+  .lead{color:var(--page-mute);max-width:74ch;margin:22px 0 4px}
+  .lead b{color:var(--page-ink)}
+  @media (max-width:900px){
+    .cmpgrid{grid-template-columns:minmax(0,1fr)}
+    .which{display:inline-flex}
+    .cmpgrid[data-view=new] .col.old,.cmpgrid[data-view=old] .col.new{display:none}
+  }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <b>TIDHAR</b>
+  <nav class="tabs" aria-label="Sections">
+    <a href="../">Aujourd’hui</a>
+    <a href="./">Direction 2</a>
+    <a href="comparer.html" aria-current="page">Comparer</a>
+  </nav>
+</div></header>
+
+<div class="wrap"><p class="lead"><b>L’ancienne et la nouvelle, pilotées ensemble.</b> L’heure, le jour, la météo et les scénarios ci-dessous s’appliquent aux deux en même temps. À l’intérieur de chaque maquette, vous pouvez toujours toucher les onglets, le cadran et la montre.</p></div>
+
+<div class="controls"><div class="wrap">
+  <div class="seg" role="group" aria-label="Produit">
+    <button data-cp="hatadhar" lang="he" aria-pressed="true">הַתָּדִיר</button>
+    <button data-cp="awqat" lang="ar">الأوقات</button>
+    <button data-cp="kairos">Kairos</button>
+  </div>
+  <label class="time"><span class="h-small" style="margin:0">Heure</span><input id="ct" type="range" min="0" max="1439" step="1" aria-label="Heure de la journée"><output id="cout" for="ct"></output></label>
+  <button class="chip" data-c="prev" aria-label="Jour précédent">◀</button>
+  <span class="h-small" id="cday" style="margin:0;min-width:150px;text-align:center"></span>
+  <button class="chip" data-c="next" aria-label="Jour suivant">▶</button>
+  <button class="chip" data-c="now">Maintenant</button>
+  <button class="chip" data-c="play" aria-pressed="false">Lecture</button>
+  <button class="chip" data-c="end">Fin de fenêtre</button>
+  <button class="chip" data-c="erev" data-only="hatadhar">Veille de Chabbat</button>
+  <button class="chip" data-c="shab" data-only="hatadhar">Chabbat</button>
+  <button class="chip" data-c="motz" data-only="hatadhar">Sortie de Chabbat</button>
+  <div class="seg" role="group" aria-label="Météo" data-only="hatadhar awqat">
+    <button data-cw="0" aria-pressed="true">Dégagé</button><button data-cw="0.45">Voilé</button><button data-cw="0.9">Couvert</button><button data-cw="rain">Pluie</button>
+  </div>
+  <div class="seg which" role="group" aria-label="Version affichée">
+    <button data-show="old">Ancienne</button><button data-show="new" aria-pressed="true">Nouvelle</button>
+  </div>
+</div></div>
+
+<div class="wrap">
+  <div class="cmpgrid" id="grid" data-view="new">
+    <div class="col old"><h2>Aujourd’hui <small id="v1note"></small></h2><iframe id="f1" title="Maquette actuelle"></iframe></div>
+    <div class="col new"><h2>Direction 2 <small>proposition</small></h2><iframe id="f2" title="Direction 2" src="index.html?embed=1"></iframe></div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script>
+(function () {
+  'use strict';
+  var T = window.TIDHAR, f1 = document.getElementById('f1'), f2 = document.getElementById('f2');
+  var V1 = { hatadhar: '../hatadhar/maquette.html', awqat: '../al-awqat/maquette.html', kairos: '../kairos/maquette.html' };
+  var CITY = { hatadhar: 'jerusalem', awqat: 'makkah', kairos: 'paris' };   // la ville par défaut de chaque ancienne maquette
+  var AR = { 'مكة': 'makkah', 'الدار البيضاء': 'casablanca', 'باريس': 'paris', 'إسطنبول': 'istanbul', 'طهران': 'tehran' };
+  var st = { p: 'hatadhar', now: new Date(), wx: 0, playing: false }, timer = null, v1ok = false;
+  function $(s) { return document.querySelector(s); }
+  function $$(s) { return [].slice.call(document.querySelectorAll(s)); }
+  function tz() { return T.CITIES[CITY[st.p]].tz; }
+  function D() { try { return f2.contentWindow.D2; } catch (e) { return null; } }
+
+  function pushD2(full) {
+    var d = D(); if (!d) return; var S = d.S, changed = S.p !== st.p;
+    S.p = st.p; S.cfg[st.p].city = CITY[st.p]; S.now = new Date(+st.now); S.wx = st.wx;
+    if (changed || full) { S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; S.sheet = null; d.render(); } else d.paint();
+  }
+  /* L'ancienne maquette se pilote par ses propres commandes : on les actionne à sa place. */
+  function pushV1() {
+    var d; try { d = f1.contentDocument; } catch (e) { return; }
+    if (!v1ok || !d || !d.getElementById('tslider')) return;
+    var w = T.wall(st.now, tz()), od = d.getElementById('out-day'), mm = od && od.textContent.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (mm) { var diff = Math.round((Date.UTC(w.y, w.m, w.d) - Date.UTC(+mm[1], mm[2] - 1, +mm[3])) / 864e5), b = d.getElementById(diff > 0 ? 'dnext' : 'dprev'), n = Math.min(Math.abs(diff), 370); while (b && n--) b.click(); }
+    var s = d.getElementById('tslider'); s.value = w.h * 60 + w.min; s.dispatchEvent(new f1.contentWindow.Event('input', { bubbles: true }));
+    var wx = st.wx === 'rain' ? 0.9 : +st.wx; [].forEach.call(d.querySelectorAll('.wxb'), function (x) { if (+x.dataset.c === wx && x.getAttribute('aria-pressed') !== 'true') x.click(); });
+  }
+  function ui() {
+    var w = T.wall(st.now, tz()), z = tz();
+    $('#ct').value = w.h * 60 + w.min;
+    $('#cout').textContent = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: z, hourCycle: 'h23' }).format(st.now);
+    $('#cday').textContent = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: z }).format(st.now) + ' · ' + T.CITIES[CITY[st.p]].fr;
+    $$('[data-cp]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.cp === st.p); });
+    $$('[data-cw]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.cw) === String(st.wx)); });
+    $$('[data-only]').forEach(function (e) { e.hidden = e.dataset.only.split(' ').indexOf(st.p) < 0; });
+  }
+  function push() { ui(); pushD2(); pushV1(); }
+  function stop() { st.playing = false; clearInterval(timer); var b = $('[data-c=play]'); b.setAttribute('aria-pressed', false); b.textContent = 'Lecture'; }
+  function loadV1() { v1ok = false; $('#v1note').textContent = ''; f1.src = V1[st.p]; }
+
+  f1.addEventListener('load', function () {
+    var d; try { d = f1.contentDocument; } catch (e) { return; }
+    if (!d || !d.body) return;
+    var css = d.createElement('style'); css.textContent = '.lede,.harness,.rig{display:none!important}.stage{padding-top:10px!important}'; d.head.appendChild(css);
+    var od = d.getElementById('out-date'), txt = od ? od.textContent : '';
+    if (st.p === 'awqat') Object.keys(AR).forEach(function (k) { if (txt.indexOf(k) >= 0) CITY.awqat = AR[k]; });
+    $('#v1note').textContent = st.p === 'kairos' ? 'maquette actuelle · sans réglage de jour ni de météo' : 'maquette actuelle';
+    v1ok = true; push();
+    // À la première visite, l'ancienne maquette joue son écran de lancement puis son assistant de démarrage
+    // (sept étapes animées). On le passe à sa place, puis on resynchronise. Les visites suivantes s'en souviennent.
+    var t0 = Date.now(), seen = false, me = st.p, iv = setInterval(function () {
+      var b; try { b = f1.contentDocument.getElementById('onb-next'); } catch (e) { b = null; }
+      var vis = !!(b && b.offsetParent);
+      if (vis) { seen = true; b.click(); }
+      if (me !== st.p || (seen && !vis) || Date.now() - t0 > 9000) { clearInterval(iv); if (me === st.p) push(); }
+    }, 350);
+  });
+  f2.addEventListener('load', function () { pushD2(true); });
+
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-cp],[data-c],[data-cw],[data-show]'); if (!b) return; var c = b.dataset.c, d = D();
+    if (b.dataset.cp) { stop(); st.p = b.dataset.cp; loadV1(); ui(); return pushD2(true); }
+    if (b.dataset.cw != null) { st.wx = b.dataset.cw === 'rain' ? 'rain' : +b.dataset.cw; return push(); }
+    if (b.dataset.show) { $('#grid').dataset.view = b.dataset.show; return $$('[data-show]').forEach(function (x) { if (x.tagName === 'BUTTON') x.setAttribute('aria-pressed', x === b); }); }
+    if (c === 'play') { if (st.playing) return stop(); st.playing = true; b.setAttribute('aria-pressed', true); b.textContent = 'Pause'; timer = setInterval(function () { st.now = new Date(+st.now + 2 * T.MIN); push(); }, 110); return; }
+    stop();
+    if (c === 'prev' || c === 'next') st.now = new Date(+st.now + (c === 'next' ? 1 : -1) * 864e5);
+    else if (c === 'now') st.now = new Date();
+    else if (d) { pushD2(); d.go(c); st.now = new Date(+d.S.now); }   // la nouvelle maquette sait où tombent la fin de fenêtre et Chabbat
+    push();
+  });
+  $('#ct').addEventListener('input', function () { stop(); var w = T.wall(st.now, tz()); st.now = T.fromWall(w.y, w.m, w.d, this.value / 60, tz()); push(); });
+  ui(); loadV1();
+})();
+</script>
+</body>
+</html>

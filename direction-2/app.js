@@ -1,44 +1,28 @@
 /* TIDHAR — Direction 2 · l'interface des maquettes (téléphone, montre, autres surfaces).
- * Tout est dessiné à partir de TIDHAR.compute() : un seul moteur, toutes les surfaces. */
+ * Un seul moteur de dessin pour toutes les surfaces : TIDHAR.compute() dit quoi, ce fichier dit comment.
+ * Pas de thème clair / sombre à choisir : l'écran suit la lumière réelle du ciel et la météo. */
 (function () {
   'use strict';
-  var T = window.TIDHAR, $ = function (s, r) { return (r || document).querySelector(s); }, $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
-
-  /* ---------- textes des produits ---------- */
-  var STR = {
-    he: { left: 'נותרו', until: 'עד', next: 'בהמשך', tabs: ['שעון', 'זמנים', 'לוח', 'התראות', 'אני'], min: 'דק׳', sim: 'הדמיה · המכשיר פונה צפונה', dir: 'כיוון התפילה',
-          card: ['N', 'מז', 'ד', 'מע'], city: 'עיר', louah: 'זמני היום', week: 'השבוע', alerts: 'התראות', me: 'אני', faces: ['נקי', 'סופר'], face: 'פני השעון',
-          note: 'אין לסמוך על הזמנים עד הרגע האחרון.', wl: ['שעון', 'זמנים', 'היום'], here: 'אתם כאן' },
-    ar: { left: 'الباقي', until: 'حتى', next: 'التالي', tabs: ['الساعة', 'المواقيت', 'التقويم', 'التنبيهات', 'حسابي'], min: 'د', sim: 'محاكاة · الجهاز متجه شمالاً', dir: 'القبلة',
-          card: ['ش', 'ق', 'ج', 'غ'], city: 'المدينة', louah: 'مواقيت اليوم', week: 'هذا الأسبوع', alerts: 'التنبيهات', me: 'حسابي', faces: ['بسيط', 'أرقام'], face: 'واجهة الساعة',
-          note: 'المواقيت تقريبية بفارق دقيقة أو دقيقتين. راجع مسجدك عند الشك.', wl: ['الساعة', 'المواقيت', 'تسبيح'], here: 'أنت هنا' },
-    fr: { left: 'Encore', until: 'jusqu’à', next: 'Ensuite', tabs: ['Cycle', 'Journée', '', 'Repères', 'Moi'], min: 'min', sim: '', dir: '',
-          card: ['N', 'E', 'S', 'O'], city: 'Ville', louah: 'Votre journée', week: '', alerts: 'Repères du jour', me: 'Moi', faces: ['Épuré', 'Heures'], face: 'Cadran',
-          note: 'Repères indicatifs. Kairos n’est pas un dispositif médical.', wl: ['Cycle', 'Journée', 'Lumière'], here: 'Vous êtes ici' }
-  };
-  STR.he.card[0] = 'צ';
-  var IC = {
-    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', list: '<path d="M8.5 7H19M8.5 12H19M8.5 17H19M5 7h.01M5 12h.01M5 17h.01"/>',
-    cal: '<rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>', bell: '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2h-14zM10 20.5a2 2 0 0 0 4 0"/>',
-    user: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5c1-3.5 4-5 7-5s6 1.5 7 5"/>', compass: '<circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2l-1.6 4-4 1.6 1.6-4z"/>',
-    pin: '<path d="M12 21s6.5-5.6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/>', chev: '<path d="M9 5l7 7-7 7"/>'
-  };
-  function ic(n, cls) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '>' + IC[n] + '</svg>'; }
+  var T = window.TIDHAR, I = window.D2I, ic = I.ic;
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return [].slice.call((r || document).querySelectorAll(s)); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
   /* ---------- état ---------- */
-  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', theme: 'dark', playing: false, tasbih: 0,
-            cfg: { hatadhar: { city: 'jerusalem', opinion: 'gra', face: 0 }, awqat: { city: 'casablanca', method: 'mwl', asr: 'shafii', face: 0 }, kairos: { city: 'paris', wake: 7, face: 0 } },
-            off: {} };
-  var M = null; // dernier modèle calculé
+  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0,
+            wx: 0, face: 'sky', sheet: null, flash: false, heading: 0, shabbatOn: false, prayed: {}, off: {},
+            cfg: { hatadhar: { city: 'jerusalem', opinion: 'gra', rite: 'edot' }, awqat: { city: 'casablanca', method: 'mwl', asr: 'shafii' }, kairos: { city: 'paris', wake: 7 } } };
+  var M = null;
   function cfg() { return S.cfg[S.p]; }
   function P() { return T.PRODUCTS[S.p]; }
-  function L() { return STR[P().lang]; }
+  function L() { return I.STR[P().lang]; }
   function tz() { return T.CITIES[cfg().city].tz; }
+  function win(w) { return I.WIN[w.id] || { ic: 'clock', what: '' }; }
 
   /* ---------- formats ---------- */
-  var fmtCache = {};
-  function hm(d, z) { z = z || tz(); var f = fmtCache[z] || (fmtCache[z] = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: z, hourCycle: 'h23' })); return f.format(d); }
+  var fc = {};
+  function hm(d, z) { z = z || tz(); var f = fc[z] || (fc[z] = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: z, hourCycle: 'h23' })); return f.format(d); }
   function rem(ms) { var t = Math.max(0, Math.floor(ms / 6e4)); return { h: Math.floor(t / 60), m: t % 60 }; }
   function remBig(ms) { var r = rem(ms); if (r.h) return r.h + ':' + (r.m < 10 ? '0' : '') + r.m; var u = '<sup>' + L().min + '</sup>'; return P().dir === 'rtl' ? u + '<bdi>' + r.m + '</bdi>' : r.m + u; }
   function remPlain(ms) { var r = rem(ms); return r.h ? r.h + ':' + (r.m < 10 ? '0' : '') + r.m : r.m + ' ' + L().min; }
@@ -48,211 +32,296 @@
     if (l === 'ar') return r.h ? r.h + ' س ' + (r.m ? r.m + ' د' : '') : r.m + ' دقيقة';
     return r.h ? r.h + ' h ' + (r.m < 10 ? '0' : '') + r.m : r.m + ' min';
   }
-  /** La date du produit. Le jour hébraïque et le jour hégirien commencent au coucher du soleil. */
+  /** L'instant qui porte la date du produit : le jour hébraïque et le jour hégirien commencent au coucher. */
+  function dayInstant(m) { if (m.today) { var eve = m.today.shkia || m.today.maghrib; if (+m.now >= +eve) return new Date(+m.now + 432e5); } return m.now; }
   function dateText(m, d) {
-    var l = m.product.lang, z = m.city.tz, x = d || m.now;
-    if (!d && m.today) { var eve = m.today.shkia || m.today.maghrib; if (+m.now >= +eve) x = new Date(+m.now + 864e5 * 0.5); }
+    var l = m.product.lang, z = m.city.tz, x = d || dayInstant(m);
     if (l === 'he') return new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', timeZone: z }).format(x);
     if (l === 'ar') return new Intl.DateTimeFormat('ar-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long', timeZone: z }).format(x);
     return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: z }).format(x);
   }
   function weekday(m, d, style) { return new Intl.DateTimeFormat(m.product.lang, { weekday: style || 'long', timeZone: m.city.tz }).format(d || m.now); }
+  function lunarDay(m) { var cal = m.product.lang === 'ar' ? 'islamic-umalqura' : 'hebrew'; return +new Intl.DateTimeFormat('en-u-ca-' + cal, { day: 'numeric', timeZone: m.city.tz }).format(dayInstant(m)); }
 
-  /* ---------- le cadran ---------- */
-  var GEO = { full: { R: 146, rw: 10, IR: 119, iw: 16 }, watch: { R: 146, rw: 13, IR: 114, iw: 20 }, aod: { R: 144, rw: 9, IR: 114, iw: 14 }, mini: { R: 138, rw: 28, IR: 86, iw: 34 } };
-  function pt(a, r) { var t = (a - 90) * Math.PI / 180; return [(160 + r * Math.cos(t)).toFixed(2), (160 + r * Math.sin(t)).toFixed(2)]; }
-  function arc(r, a0, a1) { if (a1 - a0 > 359.9) a1 = a0 + 359.9; var p = pt(a0, r), q = pt(a1, r); return 'M' + p[0] + ' ' + p[1] + 'A' + r + ' ' + r + ' 0 ' + (a1 - a0 > 180 ? 1 : 0) + ' 1 ' + q[0] + ' ' + q[1]; }
-  function tick(a, r0, r1, col, w) { var p = pt(a, r0), q = pt(a, r1); return '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/>'; }
+  /* ---------- ce que le moment veut dire ---------- */
+  function isShabbat(m) { if (S.p !== 'hatadhar') return false; var t = m.today; return (t.dow === 5 && (+m.now >= +t.candles || S.shabbatOn)) || (t.dow === 6 && +m.now < +t.tzet); }
+  /** Bénédiction de la lune : du 3ᵉ jour (rite ashkénaze) ou du 7ᵉ (séfarade, orientaux) jusqu'à la nuit du 14. À valider par le Rav. */
+  function levana(m) {
+    var d = lunarDay(m), start = cfg().rite === 'ashkenaz' ? 3 : 7;
+    if (d < start) return { open: false, text: 'ברכת הלבנה החל מ־' + start + ' בחודש' };
+    if (d <= 14) return { open: true, text: 'אפשר לברך ברכת הלבנה, עד ליל ט״ו' };
+    return { open: false, text: 'זמן ברכת הלבנה עבר לחודש זה' };
+  }
+  function phaseName(m) { var p = m.moon, l = m.product.lang, n = p < 0.04 || p > 0.96 ? 0 : p < 0.22 ? 1 : p < 0.28 ? 2 : p < 0.46 ? 3 : p < 0.54 ? 4 : p < 0.72 ? 5 : p < 0.78 ? 6 : 7;
+    return { he: ['מולד', 'ירח עולה', 'חצי ירח', 'ירח מתמלא', 'ירח מלא', 'ירח מתמעט', 'חצי ירח', 'ירח יורד'], ar: ['محاق', 'هلال', 'تربيع أول', 'أحدب متزايد', 'بدر', 'أحدب متناقص', 'تربيع أخير', 'هلال آخر الشهر'],
+             fr: ['Nouvelle lune', 'Premier croissant', 'Premier quartier', 'Lune gibbeuse', 'Pleine lune', 'Lune gibbeuse', 'Dernier quartier', 'Dernier croissant'] }[l][n]; }
+
+  /* ---------- le ciel : la lumière réelle, puis la météo ---------- */
+  var KF = [[-18, [7, 11, 31], [13, 20, 51], [19, 27, 64]], [-6, [20, 27, 68], [59, 47, 107], [122, 74, 120]], [-1.5, [58, 72, 130], [150, 100, 140], [226, 140, 120]],
+            [3, [110, 160, 216], [236, 196, 160], [250, 228, 206]], [12, [111, 182, 242], [178, 217, 248], [240, 245, 248]], [90, [96, 172, 240], [170, 212, 247], [238, 244, 248]]];
+  function cloud() { return S.wx === 'rain' ? 1 : +S.wx; }
+  function skyTriple(alt) {
+    var a = KF[0], b = KF[KF.length - 1], i, t = 0, c = cloud(), rain = S.wx === 'rain';
+    if (alt <= a[0]) b = a; else if (alt >= b[0]) a = b; else for (i = 1; i < KF.length; i++) if (alt <= KF[i][0]) { a = KF[i - 1]; b = KF[i]; t = (alt - a[0]) / (b[0] - a[0]); break; }
+    return [1, 2, 3].map(function (k) { var col = [0, 1, 2].map(function (j) { return a[k][j] + (b[k][j] - a[k][j]) * t; }), g = 0.3 * col[0] + 0.59 * col[1] + 0.11 * col[2];
+      return col.map(function (v) { v = v + (g - v) * c * 0.8; return Math.round(v * (rain ? 0.78 : 1 - c * 0.08)); }); });
+  }
+  function rgb(c) { return 'rgb(' + c.join(',') + ')'; }
+  function skyState(m) {
+    var face = S.face, tri = skyTriple(m.alt), light = m.alt > -1.5;
+    if (face === 'sofer') return { theme: 'light', bg: '#EFE6D2', g: '#EFE6D2', sky: false };
+    if (face === 'even') return { theme: 'light', bg: 'linear-gradient(180deg,#EDE1CA,#DCCAA8)', g: '#E4D5B8', sky: false };
+    if (face === 'layla') return { theme: 'dark', bg: '#000', g: '#000', sky: false };
+    return { theme: light ? 'light' : 'dark', bg: 'linear-gradient(180deg,' + rgb(tri[0]) + ' 0%,' + rgb(tri[1]) + ' 46%,' + rgb(tri[2]) + ' 100%)', g: rgb(tri[1]), sky: true,
+             stars: clamp((-m.alt - 3) / 9, 0, 1) * (1 - cloud() * 0.92), clouds: cloud(), rain: S.wx === 'rain' };
+  }
+  function skyHTML() { return '<div class="sky" data-sky><i class="stars"></i><i class="clouds"></i><i class="rain"></i></div>'; }
+  function orbHTML(m) {
+    var o = '', k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2;
+    function pos(p) { return 'left:' + clamp((p.az - 60) / 240 * 88 + 6, 4, 96).toFixed(1) + '%;top:' + (58 - clamp(p.alt, 0, 70) / 70 * 52).toFixed(1) + 'px'; }
+    if (m.sky.sun.alt > -1) o += '<i class="orb sun" style="' + pos(m.sky.sun) + ';opacity:' + (1 - cloud() * 0.7).toFixed(2) + '"></i>';
+    if (m.sky.moon.alt > 0 && m.alt < 6) o += '<i class="orb moonorb" style="' + pos(m.sky.moon) + ';opacity:' + (1 - cloud() * 0.75).toFixed(2) + '">' + moonSVG(m) + '</i>';
+    return o;
+  }
+  function moonSVG(m) { var k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2, dx = (m.moon < 0.5 ? -1 : 1) * 2 * 11 * k;
+    return '<svg viewBox="0 0 24 24"><clipPath id="mclip"><circle cx="12" cy="12" r="11"/></clipPath><circle cx="12" cy="12" r="11" fill="#F1F3F8"/><circle cx="' + (12 + dx).toFixed(2) + '" cy="12" r="11" fill="#5F6A82" clip-path="url(#mclip)"/></svg>'; }
+
+  /* ---------- le cadran ----------
+   * Rond sur le téléphone. Sur la montre, une superellipse qui épouse le boîtier : tout l'écran sert,
+   * et l'ANGLE reste le paramètre, comme pour la face carrée du brevet. */
+  var GEO = {
+    full: { w: 320, h: 320, cx: 160, cy: 160, a: 146, b: 146, n: 2, rw: 10, ia: 118, ib: 118, iw: 16, step: 1.5 },
+    watch: { w: 212, h: 258, cx: 106, cy: 129, a: 96, b: 119, n: 4.4, rw: 9, ia: 80, ib: 103, iw: 13, step: 3 },
+    mini: { w: 320, h: 320, cx: 160, cy: 160, a: 138, b: 138, n: 2, rw: 28, ia: 86, ib: 86, iw: 34, step: 6 }
+  };
+  function pt(g, deg, d) { var t = deg * Math.PI / 180, s = Math.sin(t), c = -Math.cos(t), a = g.a + d, b = g.b + d, r = Math.pow(Math.pow(Math.abs(s) / a, g.n) + Math.pow(Math.abs(c) / b, g.n), -1 / g.n); return [g.cx + r * s, g.cy + r * c]; }
+  function line(g, a0, a1, d) { var o = [], x; if (a1 < a0) a1 = a0; for (x = a0; x < a1; x += g.step) o.push(pt(g, x, d)); o.push(pt(g, a1, d));
+    return 'M' + o.map(function (q) { return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join('L'); }
+  function seg(g, a, d0, d1, col, w) { var p = pt(g, a, d0), q = pt(g, a, d1); return '<line x1="' + p[0].toFixed(1) + '" y1="' + p[1].toFixed(1) + '" x2="' + q[0].toFixed(1) + '" y2="' + q[1].toFixed(1) + '" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round"/>'; }
   var ringCache = {};
-  /** La lumière réelle de chaque instant du cycle : 120 pas de 3°. */
-  function ring(m) {
-    var k = m.product.id + m.city.tz + m.city.lat + (+m.cycle.start);
-    if (!ringCache[k]) { var a = [], len = m.cycle.end - m.cycle.start; for (var i = 0; i < 120; i++) a.push(T.skyCSS(T.sunAlt(new Date(+m.cycle.start + (i + 0.5) / 120 * len), m.city.lat, m.city.lng))); ringCache[k] = a; }
-    return ringCache[k];
-  }
-  function dialSVG(m, detail) {
-    var g = GEO[detail], o = [], now = m.frac * 360, w0 = m.angle(m.window.start), w1 = m.angle(m.window.end), cols = ring(m), i, n = Math.floor(now / 3);
-    // l'anneau : le cycle qui se consomme
-    o.push('<circle cx="160" cy="160" r="' + g.R + '" fill="none" stroke="var(--track)" stroke-width="' + g.rw + '"/>');
-    if (detail === 'aod') o.push('<path d="' + arc(g.R, 0, Math.max(now, 1)) + '" fill="none" stroke="var(--mute)" stroke-width="' + g.rw + '"/>');
-    else {
-      for (i = 0; i < n; i++) o.push('<path d="' + arc(g.R, i * 3, i * 3 + 3.5) + '" fill="none" stroke="' + cols[i] + '" stroke-width="' + g.rw + '"/>');
-      if (now > n * 3) o.push('<path d="' + arc(g.R, n * 3, now) + '" fill="none" stroke="' + cols[Math.min(n, 119)] + '" stroke-width="' + g.rw + '"/>');
+  function ring(m) { var k = m.product.id + m.city.tz + m.city.lat + (+m.cycle.start); if (!ringCache[k]) { var a = [], len = m.cycle.end - m.cycle.start, i; for (i = 0; i < 120; i++) a.push(T.skyCSS(T.sunAlt(new Date(+m.cycle.start + (i + 0.5) / 120 * len), m.city.lat, m.city.lng))); ringCache[k] = a; } return ringCache[k]; }
+  function dialSVG(m, key, mono) {
+    var g = GEO[key], o = [], now = m.frac * 360, w0 = m.angle(m.window.start), w1 = m.angle(m.window.end), cols = ring(m), i, n = Math.floor(now / 3), di = g.ia - g.a, P = function (d, s, sw, cap) { return '<path d="' + d + '" fill="none" stroke="' + s + '" stroke-width="' + sw + '"' + (cap ? ' stroke-linecap="round" stroke-linejoin="round"' : '') + '/>'; };
+    // l'anneau : le cycle qui se consomme, coloré par la lumière réelle de chaque instant
+    o.push(P(line(g, 0, 360, 0) + 'Z', 'var(--track)', g.rw));
+    if (mono) o.push(P(line(g, 0, Math.max(now, 1), 0), 'var(--mute)', g.rw));
+    else { o.push(P(line(g, 0, Math.max(now, 0.5), 0), 'var(--edge)', g.rw + (key === 'mini' ? 8 : 3.4))); for (i = 0; i < n; i++) o.push(P(line(g, i * 3, i * 3 + 3.5, 0), cols[i], g.rw)); if (now > n * 3) o.push(P(line(g, n * 3, now, 0), cols[Math.min(n, 119)], g.rw)); }
+    if (key !== 'mini') m.cycle.windows.forEach(function (w, j) { if (j) o.push(seg(g, m.angle(w.start), -g.rw / 2 - 4, -g.rw / 2 - 8, 'var(--mute)', 1.6)); });
+    if (key === 'full') {
+      for (i = 1; i < 12; i++) { var d = pt(g, i * 30, -49); o.push('<circle cx="' + d[0].toFixed(1) + '" cy="' + d[1].toFixed(1) + '" r="1.4" fill="var(--mute)" opacity=".6"/>'); }
+      if (S.face === 'sofer') { var lab = S.p === 'kairos' ? ['6 h', '12 h', '18 h'] : (P().lang === 'he' ? ['ג׳', 'ו׳', 'ט׳'] : ['3', '6', '9']);
+        lab.forEach(function (t, j) { var q = pt(g, (j + 1) * 90, -57); o.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="15" fill="var(--mute)" style="font-family:var(--title)">' + t + '</text>'); }); }
     }
-    if (detail === 'full' || detail === 'watch') {
-      m.cycle.windows.forEach(function (w, j) { if (j) o.push(tick(m.angle(w.start), g.R - g.rw / 2 - 4, g.R - g.rw / 2 - 9, 'var(--mute)', 1.6)); });
-      if (detail === 'full') {
-        for (i = 1; i < 12; i++) { var d = pt(i * 30, 97); o.push('<circle cx="' + d[0] + '" cy="' + d[1] + '" r="1.4" fill="var(--mute)" opacity=".55"/>'); }
-        if (cfg().face) { var lab = m.product.id === 'kairos' ? ['6 h', '12 h', '18 h'] : (m.product.lang === 'he' ? ['ג׳', 'ו׳', 'ט׳'] : ['3', '6', '9']);
-          lab.forEach(function (t, j) { var q = pt((j + 1) * 90, 90); o.push('<circle cx="' + q[0] + '" cy="' + q[1] + '" r="11" fill="var(--g)"/><text x="' + q[0] + '" y="' + q[1] + '" text-anchor="middle" dominant-baseline="central" font-size="13" fill="var(--mute)" font-family="inherit">' + t + '</text>'); }); }
-      }
-    }
-    // l'arc intérieur : uniquement la fenêtre en cours ; la partie colorée est le temps restant
-    o.push('<path d="' + arc(g.IR, w0, w1) + '" fill="none" stroke="var(--s2)" stroke-width="' + g.iw + '" stroke-linecap="round"/>');
-    o.push('<path d="' + arc(g.IR, Math.min(now, w1 - 0.6), w1) + '" fill="none" stroke="' + (detail === 'aod' ? 'var(--ink)' : 'var(--acc)') + '" stroke-width="' + g.iw + '" stroke-linecap="round"/>');
-    if (detail !== 'mini') o.push(tick(w1, g.IR - g.iw / 2 - 5, g.IR + g.iw / 2 + 5, 'var(--ink)', 2.6));
+    // l'arc intérieur : uniquement la fenêtre en cours ; sa partie colorée est le temps restant
+    o.push(P(line(g, w0, w1, di), 'var(--s2)', g.iw, 1));
+    o.push(P(line(g, Math.min(now, w1 - 0.6), w1, di), mono ? 'var(--ink)' : 'var(--acc)', g.iw, 1));
+    if (key !== 'mini') o.push(seg(g, w1, di - g.iw / 2 - 4, di + g.iw / 2 + 4, 'var(--ink)', 2.6));
     // l'encoche du haut : l'ancre du cycle
-    o.push(tick(0, g.R - g.rw / 2 - (detail === 'mini' ? 2 : 6), g.R + g.rw / 2 + (detail === 'mini' ? 2 : 6), 'var(--ink)', detail === 'mini' ? 9 : 3.4));
-    // l'astre du moment, sur l'anneau
-    if (detail !== 'aod') {
-      var c = pt(now, g.R), r = detail === 'mini' ? 15 : g.rw * 0.92;
-      o.push('<circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + (r + (detail === 'mini' ? 7 : 3.5)) + '" fill="var(--g)"/>');
-      if (m.isNight) { var k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2, dx = (m.moon < 0.5 ? -1 : 1) * 2 * r * k, id = 'mc' + detail + m.product.id;
-        o.push('<clipPath id="' + id + '"><circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + r + '"/></clipPath><circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + r + '" fill="#E9EDF6"/>' +
-               '<circle cx="' + (+c[0] + dx).toFixed(2) + '" cy="' + c[1] + '" r="' + r + '" fill="#5B647A" clip-path="url(#' + id + ')"/>'); }
-      else o.push('<circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + r + '" fill="#FFE39A"/>');
-    }
-    return '<svg class="dial" viewBox="0 0 320 320" role="img" aria-label="' + esc(m.window.name + ' — ' + remText(m.remaining)) + '">' + o.join('') + '</svg>';
+    o.push(seg(g, 0, -g.rw / 2 - (key === 'mini' ? 2 : 5), g.rw / 2 + (key === 'mini' ? 2 : 5), 'var(--ink)', key === 'mini' ? 9 : 3.2));
+    // l'astre du moment
+    if (!mono) { var c = pt(g, now, 0), r = key === 'mini' ? 15 : g.rw * 0.95, cx = c[0].toFixed(1), cy = c[1].toFixed(1);
+      o.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + (key === 'mini' ? 7 : 3)) + '" fill="var(--g)"/>');
+      if (m.isNight) { var k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2, dx = (m.moon < 0.5 ? -1 : 1) * 2 * r * k, id = 'mc' + key + S.p;
+        o.push('<clipPath id="' + id + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/></clipPath><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#F1F3F8"/><circle cx="' + (c[0] + dx).toFixed(1) + '" cy="' + cy + '" r="' + r + '" fill="#5F6A82" clip-path="url(#' + id + ')"/>'); }
+      else o.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFD76A" stroke="#F0A93B" stroke-width="1.2"/>'); }
+    return '<svg class="dial" viewBox="0 0 ' + g.w + ' ' + g.h + '" role="img" aria-label="' + esc(remText(m.remaining) + ' ' + win(m.window).what) + '">' + o.join('') + '</svg>';
   }
+  /* La boussole : la rose tourne avec l'appareil, le Temple (ou la Kaaba), le soleil et la lune y sont à leur place réelle. */
   function compassSVG(m) {
-    var o = ['<circle cx="160" cy="160" r="146" fill="none" stroke="var(--s2)" stroke-width="10"/>'], i;
-    for (i = 0; i < 72; i++) o.push(tick(i * 5, 128, i % 6 ? 133 : 138, 'var(--mute)', i % 18 ? 1.2 : 2.4));
-    L().card.forEach(function (t, j) { var q = pt(j * 90, 100); o.push('<text x="' + q[0] + '" y="' + q[1] + '" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="600" fill="' + (j ? 'var(--mute)' : 'var(--ink)') + '" font-family="inherit">' + t + '</text>'); });
-    var a = pt(0, 150), b1 = pt(-6, 126), b2 = pt(6, 126);
-    o.push('<g class="needle" style="transform:rotate(' + (m.bearing || 0).toFixed(1) + 'deg)"><path d="M' + a[0] + ' ' + a[1] + 'L' + b1[0] + ' ' + b1[1] + 'L' + b2[0] + ' ' + b2[1] + 'z" fill="var(--acc)"/>' + '</g>');
+    var g = GEO.full, o = [P0('<circle cx="160" cy="160" r="146" fill="none" stroke="var(--track)" stroke-width="10"/>')], i, rose = [];
+    function P0(x) { return x; }
+    for (i = 0; i < 72; i++) rose.push(seg(g, i * 5, -18, i % 6 ? -23 : -28, 'var(--mute)', i % 18 ? 1.2 : 2.4));
+    L().card.forEach(function (t, j) { var q = pt(g, j * 90, -48); rose.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="600" fill="' + (j ? 'var(--mute)' : 'var(--ink)') + '" font-family="inherit" transform="rotate(' + (j * 90) + ' ' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ')">' + t + '</text>'); });
+    function mark(az, body) { return '<g transform="rotate(' + az.toFixed(1) + ' 160 160)">' + body + '</g>'; }
+    if (m.sky.sun.alt > -6) rose.push(mark(m.sky.sun.az, '<circle cx="160" cy="14" r="9" fill="#FFD76A" stroke="#F0A93B" stroke-width="1.4"/>'));
+    if (m.sky.moon.alt > -6) rose.push(mark(m.sky.moon.az, '<circle cx="160" cy="14" r="8" fill="#F1F3F8" stroke="#8D97AD" stroke-width="1.2"/>'));
+    rose.push(mark(m.bearing, '<circle cx="160" cy="16" r="21" fill="var(--g)" stroke="var(--gold)" stroke-width="2"/><g transform="translate(142.5 -1.5) scale(1.46)" style="color:var(--gold)">' + (S.p === 'hatadhar' ? I.raw('temple') : '<path fill="currentColor" d="M6.5 6.5h11v12h-11zM6.5 9.6h11v1.5h-11z" fill-rule="evenodd"/>') + '</g>'));
+    o.push('<g class="rose" style="transform:rotate(' + (-S.heading).toFixed(1) + 'deg)">' + rose.join('') + '</g>');
+    o.push('<path d="M160 44l-8 -16h16z" fill="var(--acc)"/>');
     return '<svg class="dial" viewBox="0 0 320 320" aria-hidden="true">' + o.join('') + '</svg>';
   }
-  function dialBox(detail, flippable, side) {
-    var back = flippable ? '<div class="face back"><div data-cmp></div><div class="cmp-c"><strong data-t="bear"></strong><small data-t="target"></small><small data-t="sim"></small></div></div>' : '';
-    return '<div class="dialbox" data-dial="' + detail + '" data-side="' + (side || 'front') + '"><div class="flip"><div class="face">' +
-      (flippable ? '<button class="dialbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' : '<div class="dialbtn">') + '<span data-svg></span>' + (flippable ? '</button>' : '</div>') +
-      (detail === 'mini' ? '' : '<div class="center">' + (detail === 'aod' ? '' : '<small data-t="left"></small>') + '<strong data-h="big"></strong>' + (detail === 'aod' ? '' : '<small data-t="untilT"></small>') + '</div>') +
-      '</div>' + back + '</div></div>';
+  function centerHTML(mono) { return '<div class="center">' + (mono ? '' : '<span class="cic" data-ic="win"></span>') + '<strong data-h="big"></strong><b class="what" data-t="what"></b>' + (mono ? '' : '<small data-t="untilT"></small>') + '</div>'; }
+  function dialBox(key, flippable, side, mono) {
+    var back = flippable ? '<div class="face back"><div data-cmp></div><div class="cmp-c"><strong data-t="bear"></strong><b data-t="target"></b><small data-t="dist"></small><small data-t="salt"></small></div></div>' : '';
+    return '<div class="dialbox" data-dial="' + key + '"' + (mono ? ' data-mono="1"' : '') + ' data-side="' + (side || 'front') + '"><div class="flip"><div class="face">' +
+      (flippable ? '<button class="dialbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' : '<div class="dialbtn">') + '<span data-svg></span>' + (flippable ? '</button>' : '</div>') + (key === 'mini' ? '' : centerHTML(mono)) + '</div>' + back + '</div></div>';
   }
 
   /* ---------- téléphone ---------- */
-  function tabs() {
-    var icons = ['clock', 'list', 'cal', 'bell', 'user'], l = L();
-    return '<nav class="tb" role="tablist">' + icons.map(function (n, i) { return l.tabs[i] ? '<button role="tab" aria-selected="' + (S.screen === i) + '" data-act="tab" data-i="' + i + '">' + ic(n) + '<span>' + l.tabs[i] + '</span></button>' : ''; }).join('') + '</nav>';
-  }
-  function sw(key, on) { return '<button class="sw" role="switch" aria-checked="' + on + '" data-act="sw" data-k="' + key + '" aria-label="' + esc(key) + '"></button>'; }
+  function tabs() { var icons = ['clock', 'list', 'cal', 'bell', 'user'], l = L();
+    return '<nav class="tb" role="tablist">' + icons.map(function (n, i) { return l.tabs[i] ? '<button role="tab" aria-selected="' + (S.screen === i) + '" data-act="tab" data-i="' + i + '">' + ic(n) + '<span>' + l.tabs[i] + '</span></button>' : ''; }).join('') + '</nav>'; }
+  function sw(key, on) { return '<button class="sw" role="switch" aria-checked="' + on + '" data-act="sw" data-k="' + esc(key) + '" aria-label="' + esc(key) + '"></button>'; }
   function isOn(key, def) { var k = S.p + key; return S.off[k] == null ? def : S.off[k]; }
   function scrDial() {
     return '<div class="row between"><button class="pill" data-act="tab" data-i="4">' + ic('pin') + '<span data-t="city"></span></button><span class="meta" data-t="date"></span></div>' +
-      '<h2 class="ttl" data-t="ttl"></h2><p class="sub" data-h="sub"></p>' +
-      '<div style="position:relative">' + (M.target ? '<button class="fbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' + ic('compass') + '</button>' : '') + dialBox('full', !!M.target, S.side) + '</div>' +
-      '<p class="lbl" style="margin-top:8px">' + L().next + '</p><div class="next" data-list="next"></div>';
+      '<div class="band"><div data-orb></div><div class="badges" data-h="badges"></div></div>' +
+      '<div class="dialwrap">' + (M.target ? '<button class="fbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' + ic(S.p === 'hatadhar' ? 'temple' : 'compass') + '</button>' : '') + dialBox('full', !!M.target, S.side) + '</div>' +
+      '<div data-h="action"></div><p class="lbl">' + L().next + '</p><div class="next" data-list="next"></div>';
   }
   function scrLouah() {
     return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="−1">' + ic('chev', 'mir') + '</button><div style="text-align:center"><div class="h1" style="margin:0" data-t="date"></div><div class="meta" data-t="wd"></div></div>' +
-      '<button data-act="day" data-d="1" aria-label="+1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" class="mir" style="transform:scaleX(' + (P().dir === 'rtl' ? 1 : -1) + ')"><path d="M15 5l-7 7 7 7"/></svg></button></div>' +
-      '<ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
+      '<button data-act="day" data-d="1" aria-label="+1">' + ic('chev', 'mir flipx') + '</button></div><div data-h="mooncard"></div><ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
   }
   function scrCal() { return '<div class="h1">' + L().week + '</div><p class="meta" data-t="date"></p><div class="wk" data-list="week"></div>'; }
+  function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div data-list="alerts"></div>'; }
   function alertRows(m) {
     var z = m.city.tz, t = m.today, k = m.marks, mn = T.MIN;
-    if (S.p === 'hatadhar') return [['סוף זמן קריאת שמע', '30 דק׳ לפני · היום ' + hm(new Date(t.sofShema - 30 * mn), z), 1], ['מנחה', '20 דק׳ לפני השקיעה · היום ' + hm(new Date(t.shkia - 20 * mn), z), 1],
-      ['הדלקת נרות', '40 דק׳ לפני · ערב שבת', 1], ['ספירת העומר', 'אחרי צאת הכוכבים · בין פסח לשבועות', 0], ['קידוש לבנה', 'כשהחלון נפתח', 0], ['רטט בשעון בלבד', 'ללא צליל · בשבת ובחג הכול שקט', 1]];
-    if (S.p === 'awqat') return [['الفجر', 'أذان · ' + hm(t.fajr, z), 1], ['الظهر', 'أذان · ' + hm(t.dhuhr, z), 1], ['العصر', 'أذان · ' + hm(t.asr, z), 1], ['المغرب', 'أذان · ' + hm(t.maghrib, z), 1], ['العشاء', 'أذان · ' + hm(t.isha, z), 1],
-      ['قبل خروج الوقت', 'تنبيه قبل 15 د من نهاية وقت كل صلاة', 1], ['اهتزاز الساعة فقط', 'بلا صوت · مناسب للعمل والمسجد', 0]];
-    return [['Lumière du matin', 'Sortir avant ' + hm(k.lumiere, z), 1], ['Dernière caféine', hm(k.cafeine, z), 1], ['Sieste possible', 'Pendant le creux · 20 min', 0], ['Écrans en veilleuse', hm(k.ecrans, z), 1], ['Coucher', hm(k.coucher, z), 1]];
+    if (S.p === 'hatadhar') return [['סוף זמן קריאת שמע', '30 דק׳ לפני · היום ' + hm(new Date(t.sofShema - 30 * mn), z), 1, 'scroll'], ['מנחה', '20 דק׳ לפני השקיעה · היום ' + hm(new Date(t.shkia - 20 * mn), z), 1, 'sunlow'],
+      ['הדלקת נרות', '40 דק׳ לפני · ערב שבת', 1, 'candles'], ['ברכת הלבנה', 'בלילה הראשון שאפשר, לפי הנוסח', 1, 'night'], ['ספירת העומר', 'אחרי צאת הכוכבים · בין פסח לשבועות', 0, 'cal'], ['נגיעה בהתראה פותחת את התפילה', 'מנחה, ערבית, הדלקת נרות…', 1, 'book'], ['רטט בשעון בלבד', 'ללא צליל · בשבת ובחג הכול שקט', 1, 'bell']];
+    if (S.p === 'awqat') return [['الفجر', 'أذان · ' + hm(t.fajr, z), 1, 'dawn'], ['الظهر', 'أذان · ' + hm(t.dhuhr, z), 1, 'sun'], ['العصر', 'أذان · ' + hm(t.asr, z), 1, 'sunlow'], ['المغرب', 'أذان · ' + hm(t.maghrib, z), 1, 'sunset'], ['العشاء', 'أذان · ' + hm(t.isha, z), 1, 'night'],
+      ['قبل خروج الوقت', 'تنبيه قبل 15 د من نهاية وقت كل صلاة', 1, 'bell'], ['اهتزاز الساعة فقط', 'بلا صوت · مناسب للعمل والمسجد', 0, 'bell']];
+    return [['Lumière du matin', 'Sortir avant ' + hm(k.lumiere, z), 1, 'sunrise'], ['Dernière caféine', hm(k.cafeine, z), 1, 'cup'], ['Sieste possible', 'Pendant le creux · 20 min', 0, 'bed'], ['Écrans en veilleuse', hm(k.ecrans, z), 1, 'moon'], ['Coucher', hm(k.coucher, z), 1, 'bed']];
   }
-  function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div data-list="alerts"></div>'; }
   function choice(key, opts, cur) { return '<div class="choice">' + opts.map(function (o) { return '<button data-act="set" data-k="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(cur) === String(o[0])) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
+  var FACES = { he: ['שמיים', 'סופר', 'אבן ירושלמית', 'לילה'], ar: ['السماء', 'الخطاط', 'الحجر', 'الليل'], fr: ['Ciel vivant', 'Encre', 'Pierre', 'Nuit'] }, FACE_ID = ['sky', 'sofer', 'even', 'layla'];
   function scrMe() {
     var c = cfg(), l = L(), lang = P().lang, h = '<div class="h1">' + l.me + '</div><p class="lbl">' + l.city + '</p>' + choice('city', P().cities.map(function (id) { return [id, T.CITIES[id][lang]]; }), c.city);
-    if (S.p === 'hatadhar') h += '<p class="lbl">שיטה · סוף זמן קריאת שמע</p>' + choice('opinion', [['gra', 'הגר״א'], ['mga', 'מגן אברהם']], c.opinion);
-    if (S.p === 'awqat') h += '<p class="lbl">طريقة الحساب</p>' + choice('method', Object.keys(T.METHODS).map(function (k) { return [k, T.METHODS[k].ar]; }), c.method) +
-      '<p class="lbl">وقت العصر</p>' + choice('asr', [['shafii', 'الشافعي · المالكي · الحنبلي'], ['hanafi', 'الحنفي']], c.asr);
+    if (S.p === 'hatadhar') h += '<p class="lbl">נוסח</p>' + choice('rite', [['edot', 'עדות המזרח'], ['sfard', 'ספרד'], ['ashkenaz', 'אשכנז']], c.rite) + '<p class="lbl">שיטה · סוף זמן קריאת שמע</p>' + choice('opinion', [['gra', 'הגר״א'], ['mga', 'מגן אברהם']], c.opinion);
+    if (S.p === 'awqat') h += '<p class="lbl">طريقة الحساب</p>' + choice('method', Object.keys(T.METHODS).map(function (k) { return [k, T.METHODS[k].ar]; }), c.method) + '<p class="lbl">وقت العصر</p>' + choice('asr', [['shafii', 'الشافعي · المالكي · الحنبلي'], ['hanafi', 'الحنفي']], c.asr);
     if (S.p === 'kairos') h += '<p class="lbl">Votre réveil habituel</p>' + choice('wake', [[6, '6 h · plutôt matinal'], [7, '7 h'], [8.5, '8 h 30 · plutôt tardif']], c.wake);
-    h += '<p class="lbl">' + l.face + '</p>' + choice('face', [[0, l.faces[0]], [1, l.faces[1]]], c.face);
+    h += '<p class="lbl">' + { he: 'עיצוב השעון', ar: 'شكل الساعة', fr: 'Modèle de cadran' }[lang] + '</p><div class="choice">' + FACE_ID.map(function (id, i) { return '<button data-face="' + id + '" aria-pressed="' + (S.face === id) + '">' + FACES[lang][i] + '</button>'; }).join('') + '</div>';
     if (S.p === 'hatadhar') h += '<div class="card"><h4>תמיכה בפרויקט</h4><p>האפליקציה חינמית, בלי פרסומות. אפשר לתרום, או להקדיש יום לעילוי נשמת או לרפואה שלמה.</p><button class="cta">הקדשת יום</button></div>';
     if (S.p === 'awqat') h += '<div class="card"><h4>النسخة الكاملة</h4><p>شراء واحد مدى الحياة. بلا إعلانات وبلا اشتراك. موقعك لا يغادر هاتفك.</p><button class="cta">عرض النسخة الكاملة</button></div>';
     if (S.p === 'kairos') h += '<div class="card"><h4>Essai de 7 jours</h4><p>Vous le démarrez vous-même. Rien n’est prélevé à la fin.</p><ol class="steps"><li>Aujourd’hui<small>Tout est ouvert, sans carte bancaire.</small></li><li>Jour 5<small>Un rappel, une seule fois.</small></li><li>Jour 7<small>L’essai s’arrête. Vous choisissez : 4,99 € par mois ou 34,99 € par an.</small></li></ol><button class="cta">Démarrer l’essai</button></div>';
     return h;
   }
+  /* Le tfilon contextuel : la prière du moment, ouverte d'un geste. */
+  function sheetHTML() {
+    var p = I.PRAY[S.sheet]; if (!p) return '';
+    var rite = { edot: 'נוסח עדות המזרח', sfard: 'נוסח ספרד', ashkenaz: 'נוסח אשכנז' }[cfg().rite];
+    return '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="' + esc(p.t) + '"><div class="row between"><div class="row"><span class="sic">' + ic(p.ic) + '</span><div><b class="st">' + p.t + '</b><small class="meta">' + rite + '</small></div></div><button class="xbtn" data-act="close" aria-label="סגירה">' + ic('x') + '</button></div>' +
+      (p.text ? '<p class="ptext">' + p.text + '</p>' : '') +
+      (p.rows.length ? '<ol class="prows">' + p.rows.map(function (r) { var am = r === 'עמידה'; return '<li><button' + (am ? ' data-act="amida"' : '') + '><span>' + r + '</span>' + (am ? '<small>' + ic('temple') + 'לכיוון בית המקדש</small>' : ic('chev', 'mir')) + '</button></li>'; }).join('') + '</ol>' : '') +
+      (p.shabbat ? '<div class="al" style="border:0"><div><b>מצב שבת בשעון</b><small>ללא צליל, ללא רטט, אין צורך לגעת</small></div><button class="sw" role="switch" aria-checked="' + S.shabbatOn + '" data-act="shabbat" aria-label="מצב שבת"></button></div>' : '') +
+      '<p class="meta" style="margin-top:10px">הטקסט המלא יגיע ממקור מאושר, לפי הנוסח שנבחר.</p></div>' +
+      (S.flash ? '<div class="flash"><div class="fl-in">' + ic('temple') + '<b>לכיוון בית המקדש</b><small>' + Math.round(M.bearing) + '° · ' + Math.round(M.distance).toLocaleString('fr-FR') + ' ' + L().km + '</small></div></div>' : '');
+  }
   function renderPhone() {
     var scr = [scrDial, scrLouah, scrCal, scrAlerts, scrMe][S.screen]();
-    $('#phone').innerHTML = '<div class="phone" dir="' + P().dir + '" lang="' + P().lang + '"><div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr">' + scr + '</div>' + tabs() + '</div>';
+    $('#phone').innerHTML = '<div class="phone" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr">' + scr + '</div>' + tabs() + '<div data-sheet>' + sheetHTML() + '</div></div>';
   }
 
   /* ---------- montre ---------- */
   function renderWatch() {
-    var l = L(), pg;
-    if (S.wscreen === 0) pg = '<div class="wtime" data-t="clock"></div><div class="wdial">' + dialBox('watch', !!M.target, S.wside) + '</div>';
-    else if (S.wscreen === 1) pg = '<div class="wtime" data-t="clock"></div><div class="wttl" data-t="ttl"></div><ul class="wl" data-list="wlist"></ul>';
-    else if (S.p === 'awqat') pg = '<div class="wtime" data-t="clock"></div><button class="wtap" data-act="tasbih"><div class="wbig" data-t="tasbih"></div><small style="color:var(--mute);font-size:13px;margin-top:6px;display:block">تسبيح · 33</small></button>';
-    else pg = '<div class="wtime" data-t="clock"></div><div class="wttl" data-t="w3a"></div><ul class="wl" data-list="w3"></ul>';
-    $('#watch').innerHTML = '<div class="watch"><div class="wcase"><div class="wscr" dir="' + P().dir + '" lang="' + P().lang + '"><div class="wsky" data-sky></div><div class="wpage">' + pg + '</div>' +
+    var l = L(), pg, top = '<div class="wtop"><span data-h="wbadge"></span><span data-t="clock"></span></div>';
+    if (S.wscreen === 0) pg = '<div class="wfull">' + dialBox('watch', !!M.target, S.wside) + '</div><div class="wclock" data-t="clock"></div>';
+    else if (S.wscreen === 1) pg = top + '<div class="wnow" data-h="wnow"></div><ul class="wl" data-list="wlist"></ul>';
+    else if (S.p === 'awqat') pg = top + '<button class="wtap" data-act="tasbih"><div class="wbig" data-t="tasbih"></div><small>تسبيح · 33</small></button>';
+    else pg = top + '<div data-h="wday"></div>';
+    $('#watch').innerHTML = '<div class="watch"><div class="wcase"><div class="wscr" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<div class="wpage' + (S.wscreen ? '' : ' full') + '">' + pg + '</div>' +
       '<div class="wdots" dir="ltr">' + [0, 1, 2].map(function (i) { return '<button data-act="wtab" data-i="' + i + '" aria-selected="' + (S.wscreen === i) + '" aria-label="' + l.wl[i] + '"><i></i></button>'; }).join('') + '</div></div></div>' +
       '<div class="wnav">' + l.wl.map(function (t, i) { return '<button data-act="wtab" data-i="' + i + '" aria-pressed="' + (S.wscreen === i) + '" lang="' + P().lang + '">' + t + '</button>'; }).join('') + '</div></div>';
   }
   function renderSurfaces() {
     var d = ' dir="' + P().dir + '" lang="' + P().lang + '"';
     $('#surfaces').innerHTML =
-      '<div class="surface"><h3>Complication et Smart Stack</h3><div class="sfc"' + d + '><div class="row"><div class="mini" data-dial="mini"><span data-svg></span></div><div style="min-width:0"><b data-t="ttl"></b><small data-t="untilT"></small></div><span class="big" data-h="big"></span></div></div><p class="cap">Sur le cadran de la montre, et remontée automatiquement dans la pile quand une fenêtre va se fermer.</p></div>' +
-      '<div class="surface"><h3>Dynamic Island et écran verrouillé</h3><div class="island"' + d + '><div class="mini" data-dial="mini"><span data-svg></span></div><span data-t="plain"></span></div><div class="sfc"' + d + '><b data-t="ttl"></b><small data-t="untilL"></small><div class="bar"><i data-bar></i></div></div><p class="cap">Activité en direct pendant la dernière heure d’une fenêtre, pas en permanence.</p></div>' +
-      '<div class="surface"><h3>Toujours allumé</h3><div class="aod">' + dialBox('aod', false) + '</div><p class="cap">Écran en veille : même lecture, sans couleur, une mise à jour par minute.</p></div>' +
-      '<div class="surface"><h3>Widget d’accueil</h3><div class="sfc wd"' + d + '><b data-t="ttl"></b><small data-h="sub"></small><ul class="wl" data-list="wlist" style="margin-top:8px"></ul></div><p class="cap">Les prochains repères, sans ouvrir l’application.</p></div>';
+      '<div class="surface"><h3>Complication et Smart Stack</h3><div class="sfc"' + d + '><div class="row"><div class="mini" data-dial="mini"><span data-svg></span></div><div style="min-width:0"><b data-t="whatShort"></b><small data-t="untilT"></small></div><span class="big" data-h="big"></span></div></div><p class="cap">Sur le cadran de la montre, et remontée d’elle-même dans la pile quand une fenêtre va se fermer.</p></div>' +
+      '<div class="surface"><h3>Dynamic Island et écran verrouillé</h3><div class="island"' + d + '><div class="mini" data-dial="mini"><span data-svg></span></div><span data-t="plain"></span></div><div class="sfc"' + d + '><div class="row"><span class="cic" data-ic="win"></span><div><b data-t="whatFull"></b><small data-t="untilL"></small></div></div><div class="bar"><i data-bar></i></div></div><p class="cap">Activité en direct pendant la dernière heure d’une fenêtre. Un appui ouvre la prière du moment.</p></div>' +
+      '<div class="surface"><h3>Toujours allumé</h3><div class="aod">' + dialBox('watch', false, 'front', true) + '</div><p class="cap">Écran en veille : même lecture, sans couleur, une mise à jour par minute.</p></div>' +
+      '<div class="surface"><h3>Widget d’accueil</h3><div class="sfc wd"' + d + '><div class="row"><span class="cic" data-ic="win"></span><div><b data-t="whatFull"></b><small data-t="untilL"></small></div></div><ul class="wl" data-list="wlist" style="margin-top:8px"></ul></div><p class="cap">Les prochains repères, sans ouvrir l’application.</p></div>';
   }
 
-  /* ---------- peinture : on met à jour ce qui bouge, sans reconstruire ---------- */
+  /* ---------- peinture ---------- */
   function upcoming(m, n) { var t = +m.now, a = []; m.cycles.forEach(function (c) { c.windows.forEach(function (w) { if (+w.start > t && a.length < n) a.push(w); }); }); return a; }
+  function actionHTML(m) {
+    var w = win(m.window), h = '', day = T.wall(m.now, m.city.tz).d;
+    if (S.p === 'hatadhar') {
+      if (w.act) h += '<button class="act" data-act="open" data-s="' + w.act + '">' + ic(I.PRAY[w.act].ic) + '<span>' + I.ACT[w.act] + '</span>' + ic('chev', 'mir') + '</button>';
+      if (m.isNight && levana(m).open && m.sky.moon.alt > 0) h += '<button class="act ghost" data-act="open" data-s="levana">' + ic('night') + '<span>ברכת הלבנה</span>' + ic('chev', 'mir') + '</button>';
+    } else if (S.p === 'awqat' && w.act) { var k = m.window.id + day, done = !!S.prayed[k]; h += '<button class="act' + (done ? ' done' : '') + '" data-act="prayed" data-k="' + k + '">' + ic(done ? 'check' : w.ic) + '<span>' + (done ? 'صلّيت · ' + m.window.name : 'صلّيت') + '</span></button>'; }
+    return h ? '<div class="acts">' + h + '</div>' : '';
+  }
+  function moonCard(m) {
+    if (S.p === 'kairos') return '';
+    var lv = S.p === 'hatadhar' ? levana(m) : null, d = lunarDay(m);
+    return '<div class="card mooncard"><div class="row"><span class="moonbig">' + moonSVG(m) + '</span><div><h4>' + phaseName(m) + '</h4><p>' + (S.p === 'hatadhar' ? 'יום ' + d + ' לחודש · ' + lv.text : 'اليوم ' + d + ' من الشهر الهجري') + '</p></div></div></div>';
+  }
+  function rowIc(label) { return '<span class="ri">' + ic(I.ROW[label] || 'clock') + '</span>'; }
   function paint() {
-    var m = M = T.compute(S.p, S.now, cfg()), l = L(), z = m.city.tz, root = $('#stage');
-    root.dataset.p = S.p; root.dataset.theme = S.theme;
-    var endT = hm(m.window.end, z), v = {
-      clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), ttl: m.window.name, left: l.left, untilT: l.until + ' ' + endT, untilL: m.window.endLabel + ' · ' + endT,
-      plain: remPlain(m.remaining), bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', sim: l.sim, tasbih: S.tasbih,
-      shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '',
-      w3a: S.p === 'hatadhar' ? weekday(m) + ' · ' + dateText(m) : 'Lumière et repères'
-    };
-    var hv = { big: remBig(m.remaining), sub: '<b>' + remText(m.remaining) + '</b> · ' + esc(m.window.endLabel) + ' ' + endT };
-    $$('[data-t]', root).forEach(function (e) { var x = v[e.dataset.t]; if (e.textContent !== String(x)) e.textContent = x; });
-    $$('[data-h]', root).forEach(function (e) { var x = hv[e.dataset.h]; if (e.innerHTML !== x) e.innerHTML = x; });
-    $$('[data-dial]', root).forEach(function (e) { $('[data-svg]', e).innerHTML = dialSVG(m, e.dataset.dial); e.classList.toggle('urgent', m.remaining < 10 * T.MIN); var c = $('[data-cmp]', e); if (c && !c.firstChild) c.innerHTML = compassSVG(m); else if (c) $('.needle', c).style.transform = 'rotate(' + (m.bearing || 0).toFixed(1) + 'deg)'; });
+    var m = M = T.compute(S.p, S.now, cfg()), l = L(), z = m.city.tz, root = $('#stage'), w = win(m.window), sk = skyState(m), shab = isShabbat(m), endT = hm(m.window.end, z);
+    root.dataset.p = S.p; root.dataset.theme = sk.theme; root.dataset.face = S.face; root.dataset.shabbat = shab ? '1' : '';
+    root.style.setProperty('--g', sk.g); root.style.setProperty('--skybg', sk.bg);
+    var whatFull = S.p === 'kairos' ? m.window.name : remText(m.remaining) + ' ' + w.what;
+    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT, untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
+      bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih,
+      shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '' };
+    var badge = shab ? '<span class="badge shab">' + ic('candles') + l.shabbat + '</span>' : '';
+    var lv = S.p === 'hatadhar' && m.isNight && levana(m).open ? '<span class="badge">' + ic('night') + 'ברכת הלבנה' + '</span>' : '';
+    var hv = { big: remBig(m.remaining), badges: badge + lv, action: actionHTML(m), mooncard: moonCard(m),
+      wbadge: shab ? '<span class="badge shab">' + ic('candles') + 'שבת</span>' : '',
+      wnow: '<span class="cic">' + ic(w.ic) + '</span><div><b>' + remPlain(m.remaining) + '</b><small>' + esc(w.what) + '</small></div>',
+      wday: S.p === 'hatadhar' ? '<div class="wttl">' + weekday(m) + ' · ' + dateText(m) + '</div>' + (shab ? '<p class="wnote">' + l.shabbatMode + '</p>' : '') + '<div class="wmoon"><span class="moonbig">' + moonSVG(m) + '</span><div><b>' + phaseName(m) + '</b><small>' + levana(m).text + '</small></div></div><ul class="wl">' + [['שקיעה', m.today.shkia], [m.today.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', m.today.tzet]].map(function (r) { return '<li>' + rowIc(r[0]) + '<span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>'
+          : '<div class="wttl">Lumière et repères</div><ul class="wl">' + [['Lumière avant', m.marks.lumiere, 'sunrise'], ['Dernière caféine', m.marks.cafeine, 'cup'], ['Coucher', m.marks.coucher, 'bed']].map(function (r) { return '<li><span class="ri">' + ic(r[2]) + '</span><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>' };
+    $$('[data-t]', root).forEach(function (e) { var x = v[e.dataset.t]; if (x != null && e.textContent !== String(x)) e.textContent = x; });
+    $$('[data-h]', root).forEach(function (e) { var x = hv[e.dataset.h]; if (x != null && e.innerHTML !== x) e.innerHTML = x; });
+    $$('[data-ic]', root).forEach(function (e) { if (e.dataset.cur !== w.ic) { e.dataset.cur = w.ic; e.innerHTML = ic(w.ic); } });
+    $$('[data-dial]', root).forEach(function (e) { $('[data-svg]', e).innerHTML = dialSVG(m, e.dataset.dial, !!e.dataset.mono); e.classList.toggle('urgent', m.remaining < 10 * T.MIN); var c = $('[data-cmp]', e); if (c) c.innerHTML = compassSVG(m); });
     $$('[data-bar]', root).forEach(function (e) { e.style.width = (100 * (1 - m.windowFrac)).toFixed(1) + '%'; });
-    $$('[data-sky]', root).forEach(function (e) { e.style.background = 'radial-gradient(130% 85% at 50% -5%,' + T.skyCSS(m.alt, 0.62) + ',rgba(0,0,0,0) 62%),#000'; });
+    $$('[data-sky]', root).forEach(function (e) { e.hidden = !sk.sky; if (!sk.sky) return; $('.stars', e).style.opacity = sk.stars.toFixed(2); $('.clouds', e).style.opacity = (sk.clouds * 0.9).toFixed(2); $('.rain', e).style.opacity = sk.rain ? 1 : 0; });
+    $$('[data-orb]', root).forEach(function (e) { var h = sk.sky ? orbHTML(m) : ''; if (e.innerHTML !== h) e.innerHTML = h; });
     var dayKey = S.p + JSON.stringify(cfg()) + T.wall(m.now, z).d;
     $$('[data-list]', root).forEach(function (e) {
       var k = e.dataset.list, h = '';
-      if (k === 'next') h = upcoming(m, 4).map(function (w) { return '<div><small>' + hm(w.start, z) + '</small><span>' + esc(w.name) + '</span></div>'; }).join('');
-      if (k === 'wlist') h = upcoming(m, e.closest('.sfc') ? 3 : 4).map(function (w) { return '<li><span>' + esc(w.name) + '</span><time>' + hm(w.start, z) + '</time></li>'; }).join('');
-      if (k === 'louah') { var done = false; m.list.forEach(function (r) { var past = +r[1] <= +m.now; if (!past && !done) { done = true; h += '<li class="cur"><div class="row"><b>' + esc(m.window.name) + '</b><span class="meta">' + l.here + '</span></div><div class="meta">' + remText(m.remaining) + ' · ' + esc(m.window.endLabel) + ' ' + endT + '</div><div class="bar"><i style="width:' + (100 * (1 - m.windowFrac)).toFixed(1) + '%"></i></div></li>'; }
-        h += '<li class="' + (past ? 'past' : '') + '"><span>' + esc(r[0]) + '</span><time>' + hm(r[1], z) + '</time></li>'; }); }
-      if (k === 'w3') { if (S.p === 'hatadhar') { var t = m.today; h = [['שקיעה', t.shkia], ['צאת הכוכבים', t.tzet]].concat(t.dow === 5 ? [['הדלקת נרות', t.candles]] : []).map(function (r) { return '<li><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join(''); }
-        else h = [['Lumière avant', m.marks.lumiere], ['Dernière caféine', m.marks.cafeine], ['Coucher', m.marks.coucher]].map(function (r) { return '<li><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join(''); }
+      if (k === 'next') h = upcoming(m, 4).map(function (x) { return '<div><span class="ri">' + ic(win(x).ic) + '</span><span><small>' + hm(x.start, z) + '</small><span>' + esc(x.name) + '</span></span></div>'; }).join('');
+      if (k === 'wlist') h = upcoming(m, e.closest('.sfc') ? 3 : 3).map(function (x) { return '<li><span class="ri">' + ic(win(x).ic) + '</span><span>' + esc(x.name) + '</span><time>' + hm(x.start, z) + '</time></li>'; }).join('');
+      if (k === 'louah') { var done = false; m.list.forEach(function (r) { var past = +r[1] <= +m.now; if (!past && !done) { done = true; h += '<li class="cur"><div class="row"><span class="cic">' + ic(w.ic) + '</span><div style="flex:1"><b>' + esc(whatFull) + '</b><div class="meta">' + esc(m.window.endLabel) + ' ' + endT + '</div></div><span class="meta">' + l.here + '</span></div><div class="bar"><i style="width:' + (100 * (1 - m.windowFrac)).toFixed(1) + '%"></i></div></li>'; }
+        h += '<li class="' + (past ? 'past' : '') + '">' + rowIc(r[0]) + '<span>' + esc(r[0]) + '</span><time>' + hm(r[1], z) + '</time></li>'; }); }
       if (k === 'alerts' || k === 'week') { if (e.dataset.key === dayKey) return; e.dataset.key = dayKey; }
-      if (k === 'alerts') h = alertRows(m).map(function (r) { return '<div class="al"><div><b>' + esc(r[0]) + '</b><small>' + esc(r[1]) + '</small></div>' + sw(r[0], isOn(r[0], !!r[2])) + '</div>'; }).join('');
-      if (k === 'week') { for (var i = 0; i < 7; i++) { var d = new Date(+m.now + i * 864e5), x = T.compute(S.p, T.fromWall(T.wall(d, z).y, T.wall(d, z).m, T.wall(d, z).d, 12, z), cfg()), t2 = x.today, key;
+      if (k === 'alerts') h = alertRows(m).map(function (r) { return '<div class="al"><span class="ri">' + ic(r[3]) + '</span><div style="flex:1"><b>' + esc(r[0]) + '</b><small>' + esc(r[1]) + '</small></div>' + sw(r[0], isOn(r[0], !!r[2])) + '</div>'; }).join('');
+      if (k === 'week') { for (var i = 0; i < 7; i++) { var d = new Date(+m.now + i * 864e5), wl = T.wall(d, z), x = T.compute(S.p, T.fromWall(wl.y, wl.m, wl.d, 12, z), cfg()), t2 = x.today, key;
           if (S.p === 'hatadhar') key = t2.dow === 5 ? ['הדלקת נרות', t2.candles] : t2.dow === 6 ? ['צאת השבת', t2.tzet] : ['שקיעה', t2.shkia]; else key = t2.dow === 5 ? ['الجمعة', t2.dhuhr] : ['المغرب', t2.maghrib];
-          h += '<button data-act="goto" data-d="' + i + '"' + (i ? '' : ' aria-current="date"') + '><span class="d"><b>' + T.wall(d, z).d + '</b><small>' + weekday(x, x.now, 'short') + '</small></span><span class="m"><span>' + dateText(x, x.now) + '</span><small>' + key[0] + '</small></span><time>' + hm(key[1], z) + '</time></button>'; } }
+          h += '<button data-act="goto" data-d="' + i + '"' + (i ? '' : ' aria-current="date"') + '><span class="d"><b>' + wl.d + '</b><small>' + weekday(x, x.now, 'short') + '</small></span><span class="m"><span>' + dateText(x, x.now) + '</span><small>' + key[0] + '</small></span>' + rowIc(key[0]) + '<time>' + hm(key[1], z) + '</time></button>'; } }
       if (e.innerHTML !== h) e.innerHTML = h;
     });
-    // commandes
-    var w = T.wall(m.now, z); $('#t').value = w.h * 60 + w.min; $('#tout').textContent = hm(m.now, z);
-    $('#cityOut').textContent = m.city.fr + ' · ' + new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: z }).format(m.now);
+    var wl2 = T.wall(m.now, z), t = $('#t'); if (t) { t.value = wl2.h * 60 + wl2.min; $('#tout').textContent = hm(m.now, z);
+      $('#cityOut').textContent = m.city.fr + ' · ' + new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: z }).format(m.now); }
+    $$('[data-wx]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.wx) === String(S.wx)); });
+    $$('[data-face]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.face === S.face); });
   }
   function render() { M = T.compute(S.p, S.now, cfg()); renderPhone(); renderWatch(); renderSurfaces(); paint();
-    $$('[data-prod]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.prod === S.p); }); $$('[data-for]').forEach(function (e) { e.hidden = e.dataset.for !== S.p; }); }
+    $$('[data-prod]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.prod === S.p); }); $$('[data-for]').forEach(function (e) { e.hidden = e.dataset.for.split(' ').indexOf(S.p) < 0; }); }
+  function sheet() { $('[data-sheet]').innerHTML = sheetHTML(); }
 
   /* ---------- interactions ---------- */
+  function go(what) {
+    var z = tz(), w = T.wall(S.now, z), add; stop();
+    if (what === 'now') S.now = new Date();
+    if (what === 'end') S.now = new Date(+M.window.end - 6 * T.MIN);
+    if (what === 'erev' || what === 'shab' || what === 'motz') { add = ((what === 'erev' ? 5 : 6) - w.dow + 7) % 7; var noon = T.fromWall(w.y, w.m, w.d + add, 12, z), d = T.compute(S.p, noon, cfg()).today;
+      S.now = what === 'shab' ? T.fromWall(w.y, w.m, w.d + add, 9.5, z) : what === 'erev' ? new Date((d.candles || d.asr) - 20 * T.MIN) : new Date(+(d.shkia || d.maghrib) + 12 * T.MIN); }
+    S.shabbatOn = false; paint();
+  }
   document.addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-act],[data-prod],[data-go]'); if (!b) return;
-    var a = b.dataset.act, z = tz();
-    if (b.dataset.prod) { S.p = b.dataset.prod; S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; return render(); }
-    if (b.dataset.go === 'now') { S.now = new Date(); stop(); return paint(); }
-    if (b.dataset.go === 'play') { S.playing ? stop() : play(); return; }
-    if (b.dataset.go === 'end') { stop(); S.now = new Date(+M.window.end - 6 * T.MIN); return paint(); }
-    if (b.dataset.go === 'fri') { stop(); var w = T.wall(S.now, z), add = (5 - w.dow + 7) % 7; S.now = T.fromWall(w.y, w.m, w.d + add, 14.5, z); return paint(); }
-    if (b.dataset.go === 'theme') { S.theme = S.theme === 'dark' ? 'light' : 'dark'; b.setAttribute('aria-pressed', S.theme === 'light'); return paint(); }
-    if (a === 'tab') { S.screen = +b.dataset.i; S.side = 'front'; renderPhone(); return paint(); }
+    var b = ev.target.closest('[data-act],[data-prod],[data-go],[data-wx],[data-face]'); if (!b) return; var a = b.dataset.act;
+    if (b.dataset.prod) { S.p = b.dataset.prod; S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; S.sheet = null; S.heading = 0; return render(); }
+    if (b.dataset.wx != null) { S.wx = b.dataset.wx === 'rain' ? 'rain' : +b.dataset.wx; return paint(); }
+    if (b.dataset.face) { S.face = b.dataset.face; return paint(); }
+    if (b.dataset.go === 'play') return S.playing ? stop() : play();
+    if (b.dataset.go) return go(b.dataset.go);
+    if (a === 'tab') { S.screen = +b.dataset.i; S.side = 'front'; S.heading = 0; S.sheet = null; renderPhone(); return paint(); }
     if (a === 'wtab') { S.wscreen = +b.dataset.i; S.wside = 'front'; renderWatch(); return paint(); }
-    if (a === 'flip') { var box = b.closest('.wscr') ? $('.wscr .dialbox') : $('.phone .dialbox'), s = box.dataset.side === 'back' ? 'front' : 'back'; box.dataset.side = s; if (b.closest('.wscr')) S.wside = s; else S.side = s; return; }
+    if (a === 'flip') { var inW = !!b.closest('.wscr'), box = $((inW ? '.wscr' : '.phone') + ' .dialbox'), s = box.dataset.side === 'back' ? 'front' : 'back'; box.dataset.side = s; if (inW) S.wside = s; else S.side = s;
+      // la rose tourne jusqu'à ce que le Temple soit en haut : l'appareil « s'aligne »
+      S.heading = 0; paint(); if (s === 'back') setTimeout(function () { S.heading = M.bearing; $$('.rose').forEach(function (r) { r.style.transform = 'rotate(' + (-S.heading).toFixed(1) + 'deg)'; }); }, 420); return; }
     if (a === 'day') { S.now = new Date(+S.now + b.dataset.d * 864e5); return paint(); }
     if (a === 'goto') { S.now = new Date(+S.now + b.dataset.d * 864e5); S.screen = 1; renderPhone(); return paint(); }
     if (a === 'sw') { var on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); S.off[S.p + b.dataset.k] = on; return; }
     if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; return render(); }
     if (a === 'tasbih') { S.tasbih = (S.tasbih + 1) % 34; return paint(); }
+    if (a === 'open') { S.sheet = b.dataset.s; S.flash = false; return sheet(); }
+    if (a === 'close') { S.sheet = null; S.flash = false; return sheet(); }
+    if (a === 'amida') { S.flash = true; sheet(); return setTimeout(function () { S.flash = false; if (S.sheet) sheet(); }, 2200); }
+    if (a === 'shabbat') { S.shabbatOn = !S.shabbatOn; sheet(); return paint(); }
+    if (a === 'prayed') { S.prayed[b.dataset.k] = !S.prayed[b.dataset.k]; return paint(); }
   });
-  $('#t').addEventListener('input', function () { stop(); var w = T.wall(S.now, tz()); S.now = T.fromWall(w.y, w.m, w.d, this.value / 60, tz()); paint(); });
+  var tEl = $('#t'); if (tEl) tEl.addEventListener('input', function () { stop(); var w = T.wall(S.now, tz()); S.now = T.fromWall(w.y, w.m, w.d, this.value / 60, tz()); paint(); });
   var timer = null;
-  function play() { S.playing = true; $('[data-go=play]').setAttribute('aria-pressed', true); $('[data-go=play]').textContent = 'Pause'; timer = setInterval(function () { S.now = new Date(+S.now + 2 * T.MIN); paint(); }, 60); }
-  function stop() { S.playing = false; clearInterval(timer); var b = $('[data-go=play]'); b.setAttribute('aria-pressed', false); b.textContent = 'Lecture'; }
+  function play() { S.playing = true; var b = $('[data-go=play]'); if (b) { b.setAttribute('aria-pressed', true); b.textContent = 'Pause'; } timer = setInterval(function () { S.now = new Date(+S.now + 2 * T.MIN); paint(); }, 60); }
+  function stop() { S.playing = false; clearInterval(timer); var b = $('[data-go=play]'); if (b) { b.setAttribute('aria-pressed', false); b.textContent = 'Lecture'; } }
   setInterval(function () { if (!S.playing && Math.abs(Date.now() - S.now) < 9e4) { S.now = new Date(); paint(); } }, 20000);
-  // glisser sur la montre pour changer d'écran
   var sx = null; document.addEventListener('pointerdown', function (e) { sx = e.target.closest('.wscr') ? e.clientX : null; });
-  document.addEventListener('pointerup', function (e) { if (sx == null) return; var d = e.clientX - sx; sx = null; if (Math.abs(d) < 30) return; var dir = (d < 0 ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1); S.wscreen = Math.max(0, Math.min(2, S.wscreen + dir)); S.wside = 'front'; renderWatch(); paint(); });
+  document.addEventListener('pointerup', function (e) { if (sx == null) return; var d = e.clientX - sx; sx = null; if (Math.abs(d) < 30) return; var dir = (d < 0 ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1); S.wscreen = clamp(S.wscreen + dir, 0, 2); S.wside = 'front'; renderWatch(); paint(); });
+  if (/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
   render();
-  window.D2 = { S: S, render: render, paint: paint };
+  window.D2 = { S: S, render: render, paint: paint, go: go, T: T };
 })();

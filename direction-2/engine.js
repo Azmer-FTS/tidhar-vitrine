@@ -46,8 +46,20 @@
     return { noon: fromJ(jn), at: at, dec: de, phi: phi };
   }
 
+  /** Où sont le soleil et la lune dans le ciel : azimut en degrés depuis le nord, hauteur en degrés. */
+  function celest(date, lat, lng) {
+    var d = toDays(+date), phi = rad * lat, th = rad * (280.16 + 360.9856235 * d) + rad * lng;
+    function pos(ra, de) { var H = th - ra; return { az: ((Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(de) * Math.cos(phi)) / rad) + 180 + 360) % 360,
+      alt: Math.asin(Math.sin(phi) * Math.sin(de) + Math.cos(phi) * Math.cos(de) * Math.cos(H)) / rad }; }
+    var l = eclLon(anomaly(d)), s = pos(rasc(l), decl(l));
+    var L = rad * (218.316 + 13.176396 * d), M = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.22935 * d), ml = L + rad * 6.289 * Math.sin(M), mb = rad * 5.128 * Math.sin(F);
+    var mra = Math.atan2(Math.sin(ml) * Math.cos(OBL) - Math.tan(mb) * Math.sin(OBL), Math.cos(ml)), mde = Math.asin(Math.sin(mb) * Math.cos(OBL) + Math.cos(mb) * Math.sin(OBL) * Math.sin(ml));
+    return { sun: s, moon: pos(mra, mde) };
+  }
+  function distanceKm(lat, lng, lat2, lng2) { var a = Math.sin((lat2 - lat) * rad / 2), b = Math.sin((lng2 - lng) * rad / 2), h = a * a + Math.cos(lat * rad) * Math.cos(lat2 * rad) * b * b; return 12742 * Math.asin(Math.sqrt(h)); }
+
   /** Phase de la lune, 0 = nouvelle, 0.5 = pleine (approximation synodique, suffisante pour un pictogramme). */
-  function moonPhase(date) { var p = ((+date / DAY - 10.3166) / 29.530588853) % 1; return p < 0 ? p + 1 : p; }
+  function moonPhase(date) { var p = ((+date - Date.UTC(2000, 0, 6, 18, 14)) / DAY / 29.530588853) % 1; return p < 0 ? p + 1 : p; }
 
   /* ---------- fuseaux : toujours des identifiants IANA, jamais un décalage figé ---------- */
   function tzOffsetMs(date, tz) {
@@ -143,7 +155,7 @@
                 ['מנחה גדולה', B.minchaG], ['מנחה קטנה', B.minchaK], ['פלג המנחה', B.plag]];
     if (B.dow === 5) list.push(['הדלקת נרות', B.candles]);
     list.push(['שקיעה', B.shkia], [B.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', B.tzet], ['חצות הלילה', mid(B.shkia, C.netz)]);
-    return { cycles: cycles, list: list, today: B, target: { lat: 31.778, lng: 35.2354, label: 'ירושלים' } };
+    return { cycles: cycles, list: list, today: B, target: { lat: 31.778, lng: 35.2354, label: 'בית המקדש' } };
   }
 
   /* ---------- الأوقات : les cinq prières ---------- */
@@ -175,7 +187,7 @@
       return { night: false, start: b.sunrise, end: b.sunset, windows: ws };
     }
     var list = [['الفجر', B.fajr], ['الشروق', B.sunrise], [B.dow === 5 ? 'الجمعة' : 'الظهر', B.dhuhr], ['العصر', B.asr], ['المغرب', B.maghrib], ['العشاء', B.isha], ['منتصف الليل', mid(B.sunset, C.fajr)]];
-    return { cycles: [night(A, B), day(B), night(B, C)], list: list, today: B, target: { lat: 21.4225, lng: 39.8262, label: 'مكة المكرمة' } };
+    return { cycles: [night(A, B), day(B), night(B, C)], list: list, today: B, target: { lat: 21.4225, lng: 39.8262, label: 'الكعبة المشرفة' } };
   }
 
   /* ---------- Kairos : la journée circadienne, du réveil au réveil ----------
@@ -218,9 +230,10 @@
       remaining: win.end - t, windowFrac: (t - win.start) / (win.end - win.start),
       angle: function (d) { return ((+d - cycle.start) / len) * 360; },
       alt: alt, isNight: alt < HORIZON, moon: moonPhase(now),
-      bearing: r.target ? bearing(city.lat, city.lng, r.target.lat, r.target.lng) : null, target: r.target
+      bearing: r.target ? bearing(city.lat, city.lng, r.target.lat, r.target.lng) : null, target: r.target,
+      distance: r.target ? distanceKm(city.lat, city.lng, r.target.lat, r.target.lng) : null, sky: celest(now, city.lat, city.lng)
     };
   }
 
-  root.TIDHAR = { compute: compute, PRODUCTS: PRODUCTS, CITIES: CITIES, METHODS: METHODS, sunAlt: sunAlt, skyCSS: skyCSS, skyRGB: skyRGB, wall: wall, fromWall: fromWall, moonPhase: moonPhase, solar: solar, MIN: MIN };
+  root.TIDHAR = { celest: celest, compute: compute, PRODUCTS: PRODUCTS, CITIES: CITIES, METHODS: METHODS, sunAlt: sunAlt, skyCSS: skyCSS, skyRGB: skyRGB, wall: wall, fromWall: fromWall, moonPhase: moonPhase, solar: solar, MIN: MIN };
 })(typeof window !== 'undefined' ? window : globalThis);
