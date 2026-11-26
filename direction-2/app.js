@@ -10,7 +10,8 @@
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
   /* ---------- état ---------- */
-  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0, intro: 1,
+  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0, intro: 1, calView: 'month', calSel: null, calMon: null, draft: { type: 'bday', remind: 'eve', name: '' },
+            events: [{ type: 'azkara', name: 'סבא יצחק ז״ל', m: 'Kislev', d: 19, remind: 'eve', demo: 1 }, { type: 'bday', name: 'נועם', m: 'Kislev', d: 22, remind: 'eve', demo: 1 }],
             wx: 0, face: 'sky', sheet: null, flash: false, heading: 0, shabbatOn: false, prayed: {}, off: {},
             cfg: { hatadhar: { city: 'jerusalem', opinion: 'gra', rite: 'edot' }, awqat: { city: 'casablanca', method: 'mwl', asr: 'shafii' }, kairos: { city: 'paris', wake: 7 } } };
   var M = null;
@@ -39,12 +40,42 @@
   function dayInstant(m) { if (m.today) { var eve = m.today.shkia || m.today.maghrib; if (+m.now >= +eve) return new Date(+m.now + 432e5); } return m.now; }
   function dateText(m, d) {
     var l = m.product.lang, z = m.city.tz, x = d || dayInstant(m);
-    if (l === 'he') return new Intl.DateTimeFormat('he-u-ca-hebrew', { day: 'numeric', month: 'long', timeZone: z }).format(x);
+    if (l === 'he') return hebDate(x, z);
     if (l === 'ar') return new Intl.DateTimeFormat('ar-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long', timeZone: z }).format(x);
     return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: z }).format(x);
   }
   function weekday(m, d, style) { return new Intl.DateTimeFormat(m.product.lang, { weekday: style || 'long', timeZone: m.city.tz }).format(d || m.now); }
   function lunarDay(m) { var cal = m.product.lang === 'ar' ? 'islamic-umalqura' : 'hebrew'; return +new Intl.DateTimeFormat('en-u-ca-' + cal, { day: 'numeric', timeZone: m.city.tz }).format(dayInstant(m)); }
+
+  /* ---------- le calendrier hébraïque : tout en lettres ---------- */
+  var hfmt = {}, HMON = { Tishri: 'תשרי', Heshvan: 'חשוון', Kislev: 'כסלו', Tevet: 'טבת', Shevat: 'שבט', 'Adar I': 'אדר א׳', 'Adar II': 'אדר ב׳', Adar: 'אדר', Nisan: 'ניסן', Iyar: 'אייר', Sivan: 'סיוון', Tamuz: 'תמוז', Av: 'אב', Elul: 'אלול' };
+  function hparts(d, z) { var f = hfmt[z] || (hfmt[z] = new Intl.DateTimeFormat('en-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z })), o = {}; f.formatToParts(d).forEach(function (x) { o[x.type] = x.value; }); return { d: +o.day, m: o.month, y: +o.year }; }
+  /** Un nombre en lettres hébraïques : 16 → ט״ז, 787 → תשפ״ז. */
+  function gem(n) { var H = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק'], D = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'], U = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'], x = n % 100,
+      s = H[Math.floor(n / 100) % 10] + (x === 15 ? 'טו' : x === 16 ? 'טז' : D[Math.floor(x / 10)] + U[x % 10]); return s.length > 1 ? s.slice(0, -1) + '״' + s.slice(-1) : s + '׳'; }
+  function hebDate(d, z, year) { var q = hparts(d, z); return gem(q.d) + ' ב' + HMON[q.m] + (year ? ' ' + gem(q.y % 1000) : ''); }
+  /** Le jour de la semaine du calendrier du produit : après le coucher du soleil, c'est déjà la nuit du lendemain. */
+  function wdText(m, d) { var l = m.product.lang, x = d || dayInstant(m), dow = T.wall(x, m.city.tz).dow, night = !d && m.isNight;
+    if (l === 'he') return dow === 6 ? (night ? 'ליל שבת' : 'שבת') : (night ? 'ליל ' : 'יום ') + 'אבגדהו'.charAt(dow) + '׳';
+    if (l === 'ar') return (night ? 'ليلة ' : '') + weekday(m, x);
+    return weekday(m, d || m.now); }
+  /** La date grégorienne suit son propre calendrier : elle change à minuit. Entre le coucher du soleil et minuit,
+   *  une pastille annonce la date qui arrive, pour que les deux calendriers se lisent ensemble sans se contredire. */
+  function gregHTML(m) { if (S.p === 'kairos') return ''; var z = m.city.tz, lg = m.product.lang + '-u-ca-gregory-nu-latn', di = dayInstant(m),
+      g = new Intl.DateTimeFormat(lg, { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(m.now); if (di === m.now) return esc(g);
+    return esc(g) + '<span class="gnext">' + ic('clock') + (m.product.lang === 'he' ? 'מ־00:00 · ' : 'من 00:00 · ') + esc(new Intl.DateTimeFormat(lg, { day: 'numeric', month: 'long', timeZone: z }).format(di)) + '</span>'; }
+  function calNoon(d) { var z = tz(), w = T.wall(d, z); return T.fromWall(w.y, w.m, w.d, 12, z); }
+  function hmonth(anchor, z) { var q = hparts(anchor, z), first = +anchor - (q.d - 1) * 864e5, days = [], i, d, h; for (i = 0; i < 31; i++) { d = calNoon(new Date(first + i * 864e5)); h = hparts(d, z); if (h.m !== q.m) break; days.push({ date: d, h: h, w: T.wall(d, z) }); } return { m: q.m, y: q.y, days: days }; }
+  /** Les fêtes à date fixe (coutume d'Israël). Les jeûnes déplacés, les parachiot et la diaspora demandent une source validée. */
+  function holiday(h, date, z) { var m = h.m, d = h.d, o = [], F = { Tishri: { 1: 'ראש השנה', 2: 'ראש השנה', 10: 'יום כיפור', 15: 'סוכות', 21: 'הושענא רבה', 22: 'שמיני עצרת ושמחת תורה' }, Shevat: { 15: 'ט״ו בשבט' }, Nisan: { 15: 'פסח', 21: 'שביעי של פסח' }, Iyar: { 18: 'ל״ג בעומר' }, Sivan: { 6: 'שבועות' }, Tevet: { 10: 'צום עשרה בטבת' }, Av: { 15: 'ט״ו באב' } };
+    if ((d === 1 && m !== 'Tishri') || d === 30) o.push('ראש חודש'); if (F[m] && F[m][d]) o.push(F[m][d]);
+    if (m === 'Tishri' && d >= 16 && d <= 20) o.push('חול המועד סוכות'); if (m === 'Nisan' && d >= 16 && d <= 20) o.push('חול המועד פסח');
+    if ((m === 'Adar' || m === 'Adar II') && d === 14) o.push('פורים');
+    if (m === 'Kislev' && d >= 25) o.push('חנוכה · נר ' + gem(d - 24));
+    if (m === 'Tevet' && d <= 3) { var n = hparts(new Date(+date - d * 864e5), z).d - 24 + d; if (n <= 8) o.push('חנוכה · נר ' + gem(n)); }
+    return o; }
+  function dayEvents(day, z) { return { hol: holiday(day.h, day.date, z), mine: S.events.filter(function (e) { return e.m === day.h.m && e.d === day.h.d; }) }; }
+  var EVT = { bday: 'יום הולדת', azkara: 'אזכרה', event: 'אירוע' }, REMS = [['eve', 'בערב, עם כניסת התאריך העברי'], ['morning', 'בבוקר'], ['week', 'שבוע לפני']];
 
   /* ---------- ce que le moment veut dire ---------- */
   function isShabbat(m) { if (S.p !== 'hatadhar') return false; var t = m.today; return (t.dow === 5 && (+m.now >= +t.candles || S.shabbatOn)) || (t.dow === 6 && +m.now < +t.tzet); }
@@ -217,27 +248,58 @@
   function scrLouah() {
     // Les flèches pointent vers l'extérieur : en hébreu et en arabe, le jour suivant est à gauche.
     var nav = { he: ['היום הקודם', 'היום הבא'], ar: ['اليوم السابق', 'اليوم التالي'], fr: ['Jour précédent', 'Jour suivant'] }[P().lang];
-    return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="' + nav[0] + '">' + ic('chev', 'mir flipx') + '</button><div style="text-align:center"><div class="h1" style="margin:0" data-t="date"></div><div class="meta" data-t="wd"></div><div class="meta greg" data-t="greg"></div></div>' +
+    return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="' + nav[0] + '">' + ic('chev', 'mir flipx') + '</button><div style="text-align:center"><div class="h1 dayline" style="margin:0" data-t="dayline"></div><div class="meta greg" data-h="greg"></div></div>' +
       '<button data-act="day" data-d="1" aria-label="' + nav[1] + '">' + ic('chev', 'mir') + '</button></div><div data-h="mooncard"></div><ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
   }
-  function scrCal() { return '<div class="h1">' + L().week + '</div><p class="meta" data-t="date"></p><div class="wk" data-list="week"></div>'; }
+  function scrCal() {
+    if (S.p !== 'hatadhar') return '<div class="h1">' + L().week + '</div><p class="meta" data-t="date"></p><div class="wk" data-list="week"></div>';
+    var z = tz(), today = calNoon(dayInstant(M)), sel = S.calSel || today, seg = function (v, s) { return '<button data-act="calview" data-v="' + v + '" aria-pressed="' + (S.calView === v) + '">' + s + '</button>'; },
+        head = '<div class="calhead"><div class="seg2" role="group">' + seg('week', 'שבוע') + seg('month', 'חודש') + '</div><button class="fab" data-act="addev" aria-label="הוספת אירוע">' + ic('plus') + '</button></div>';
+    if (S.calView === 'week') return head + '<div class="wk" data-list="week"></div>';
+    var mo = hmonth(S.calMon || sel, z), gm = function (d, o) { o.timeZone = z; return new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', o).format(d); }, d0 = mo.days[0], d1 = mo.days[mo.days.length - 1], ga = gm(d0.date, { month: 'long' }), gb = gm(d1.date, { month: 'long' }), i,
+        h = head + '<div class="mnav"><button data-act="mon" data-d="-1" aria-label="החודש הקודם">' + ic('chev', 'mir flipx') + '</button><div><b>' + HMON[mo.m] + ' ' + gem(mo.y % 1000) + '</b><small>' + (ga === gb ? ga : ga + ' – ' + gb) + ' ' + gm(d1.date, { year: 'numeric' }) + '</small></div><button data-act="mon" data-d="1" aria-label="החודש הבא">' + ic('chev', 'mir') + '</button></div><div class="mgrid">' +
+          ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'].map(function (x) { return '<span class="dow">' + x + '</span>'; }).join('');
+    for (i = 0; i < d0.w.dow; i++) h += '<span></span>';
+    mo.days.forEach(function (d) { var ev = dayEvents(d, z); h += '<button class="mday' + (+d.date === +today ? ' today' : '') + (+d.date === +sel ? ' sel' : '') + (d.w.dow === 6 ? ' shab' : '') + '" data-act="calsel" data-t0="' + (+d.date) + '" aria-label="' + hebDate(d.date, z) + '"><b>' + gem(d.h.d).replace(/[׳״]/g, '') + '</b><small>' + d.w.d + '</small><i>' + (ev.hol.length ? '<u></u>' : '') + (ev.mine.length ? '<u class="mine"></u>' : '') + '</i></button>'; });
+    return h + '</div>' + agenda(sel, z);
+  }
+  function remText2(e, prevT, z) { return e.remind === 'eve' ? 'התראה בערב שלפני, בצאת הכוכבים · ' + hm(prevT.tzet, z) : e.remind === 'morning' ? 'התראה בבוקר היום' : 'התראה שבוע לפני, בערב'; }
+  function agenda(d, z) {
+    var ev = dayEvents({ date: d, h: hparts(d, z) }, z), x = T.compute(S.p, d, cfg()), t2 = x.today, prev = T.compute(S.p, new Date(+d - 864e5), cfg()).today, rows = '',
+        key = t2.dow === 5 ? ['הדלקת נרות', t2.candles] : t2.dow === 6 ? ['צאת השבת', t2.tzet] : ['שקיעה', t2.shkia];
+    ev.hol.forEach(function (n) { rows += '<li><span class="ri">' + ic('cal') + '</span><span>' + n + '</span></li>'; });
+    ev.mine.forEach(function (e) { rows += '<li class="mine"><span class="ri">' + ic(e.type === 'azkara' ? 'flame' : e.type === 'bday' ? 'gift' : 'bell') + '</span><span><b>' + EVT[e.type] + ' · ' + esc(e.name) + '</b><small>' + remText2(e, prev, z) + '</small></span>' + (e.demo ? '<em>דוגמה</em>' : '') + '</li>'; });
+    rows += '<li>' + rowIc(key[0]) + '<span>' + key[0] + '</span><time>' + hm(key[1], z) + '</time></li>';
+    return '<div class="agenda"><div class="aghead"><b>' + wdText(x, d) + ' · ' + hebDate(d, z) + '</b><small>' + new Intl.DateTimeFormat('he-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(d) + '</small></div><ul class="list">' + rows + '</ul>' +
+      '<button class="addrow" data-act="addev">' + ic('plus') + '<span>הוספת יום הולדת, אזכרה או אירוע</span></button></div>';
+  }
   function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div data-list="alerts"></div>'; }
   function alertRows(m) {
     var z = m.city.tz, t = m.today, k = m.marks, mn = T.MIN;
     if (S.p === 'hatadhar') return [['סוף זמן קריאת שמע', '30 דק׳ לפני · היום ' + hm(new Date(t.sofShema - 30 * mn), z), 1, 'scroll'], ['מנחה', '20 דק׳ לפני השקיעה · היום ' + hm(new Date(t.shkia - 20 * mn), z), 1, 'sunlow'],
-      ['הדלקת נרות', '40 דק׳ לפני · ערב שבת', 1, 'candles'], ['ברכת הלבנה', 'בלילה הראשון שאפשר, לפי הנוסח', 1, 'night'], ['ספירת העומר', 'אחרי צאת הכוכבים · בין פסח לשבועות', 0, 'cal'], ['נגיעה בהתראה פותחת את התפילה', 'מנחה, ערבית, הדלקת נרות…', 1, 'book'], ['רטט בשעון בלבד', 'ללא צליל · בשבת ובחג הכול שקט', 1, 'bell']];
+      ['הדלקת נרות', '40 דק׳ לפני · ערב שבת', 1, 'candles'], ['ברכת הלבנה', 'בלילה הראשון שאפשר, לפי הנוסח', 1, 'night'], ['ימי הולדת ואזכרות', 'בערב, עם כניסת התאריך העברי', 1, 'gift'], ['ספירת העומר', 'אחרי צאת הכוכבים · בין פסח לשבועות', 0, 'cal'], ['נגיעה בהתראה פותחת את התפילה', 'מנחה, ערבית, הדלקת נרות…', 1, 'book'], ['רטט בשעון בלבד', 'ללא צליל · בשבת ובחג הכול שקט', 1, 'bell']];
     if (S.p === 'awqat') return [['الفجر', 'أذان · ' + hm(t.fajr, z), 1, 'dawn'], ['الظهر', 'أذان · ' + hm(t.dhuhr, z), 1, 'sun'], ['العصر', 'أذان · ' + hm(t.asr, z), 1, 'sunlow'], ['المغرب', 'أذان · ' + hm(t.maghrib, z), 1, 'sunset'], ['العشاء', 'أذان · ' + hm(t.isha, z), 1, 'night'],
       ['قبل خروج الوقت', 'تنبيه قبل 15 د من نهاية وقت كل صلاة', 1, 'bell'], ['اهتزاز الساعة فقط', 'بلا صوت · مناسب للعمل والمسجد', 0, 'bell']];
     return [['Lumière du matin', 'Sortir avant ' + hm(k.lumiere, z), 1, 'sunrise'], ['Dernière caféine', hm(k.cafeine, z), 1, 'cup'], ['Sieste possible', 'Pendant le creux · 20 min', 0, 'bed'], ['Écrans en veilleuse', hm(k.ecrans, z), 1, 'moon'], ['Coucher', hm(k.coucher, z), 1, 'bed']];
   }
   function choice(key, opts, cur) { return '<div class="choice">' + opts.map(function (o) { return '<button data-act="set" data-k="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(cur) === String(o[0])) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
   var FACES = { he: ['שמיים', 'שעות זמניות', 'נקי', 'לילה'], ar: ['السماء', 'الساعات', 'بسيط', 'الليل'], fr: ['Ciel vivant', 'Heures', 'Épuré', 'Nuit'] }, FACE_ID = ['sky', 'otiot', 'pashut', 'layla'];
+  function OPTS(key) { var lang = P().lang;
+    if (key === 'city') return { t: L().city, ic: 'pin', list: P().cities.map(function (id) { return [id, T.CITIES[id][lang]]; }) };
+    if (key === 'rite') return { t: 'נוסח', ic: 'book', list: [['edot', 'עדות המזרח', 'ברכת הלבנה מז׳ בחודש'], ['sfard', 'ספרד', 'ברכת הלבנה מז׳ בחודש'], ['ashkenaz', 'אשכנז', 'ברכת הלבנה מג׳ בחודש']] };
+    if (key === 'opinion') return { t: 'שיטה · סוף זמן קריאת שמע', ic: 'scroll', list: [['gra', 'הגר״א', 'היום נמדד מהנץ החמה עד השקיעה'], ['mga', 'מגן אברהם', 'היום נמדד מעלות השחר עד צאת הכוכבים']] };
+    if (key === 'method') return { t: 'طريقة الحساب', ic: 'compass', list: Object.keys(T.METHODS).map(function (k) { return [k, T.METHODS[k].ar]; }) };
+    if (key === 'asr') return { t: 'وقت العصر', ic: 'sunlow', list: [['shafii', 'الشافعي · المالكي · الحنبلي'], ['hanafi', 'الحنفي']] };
+    return { t: 'Votre réveil habituel', ic: 'sunrise', list: [[6, '6 h', 'Plutôt matinal'], [7, '7 h'], [8.5, '8 h 30', 'Plutôt tardif']] }; }
   function scrMe() {
-    var c = cfg(), l = L(), lang = P().lang, h = '<div class="h1">' + l.me + '</div><p class="lbl">' + l.city + '</p>' + choice('city', P().cities.map(function (id) { return [id, T.CITIES[id][lang]]; }), c.city);
-    if (S.p === 'hatadhar') h += '<p class="lbl">נוסח</p>' + choice('rite', [['edot', 'עדות המזרח'], ['sfard', 'ספרד'], ['ashkenaz', 'אשכנז']], c.rite) + '<p class="lbl">שיטה · סוף זמן קריאת שמע</p>' + choice('opinion', [['gra', 'הגר״א'], ['mga', 'מגן אברהם']], c.opinion);
-    if (S.p === 'awqat') h += '<p class="lbl">طريقة الحساب</p>' + choice('method', Object.keys(T.METHODS).map(function (k) { return [k, T.METHODS[k].ar]; }), c.method) + '<p class="lbl">وقت العصر</p>' + choice('asr', [['shafii', 'الشافعي · المالكي · الحنبلي'], ['hanafi', 'الحنفي']], c.asr);
-    if (S.p === 'kairos') h += '<p class="lbl">Votre réveil habituel</p>' + choice('wake', [[6, '6 h · plutôt matinal'], [7, '7 h'], [8.5, '8 h 30 · plutôt tardif']], c.wake);
-    h += '<p class="lbl">' + { he: 'עיצוב השעון', ar: 'شكل الساعة', fr: 'Modèle de cadran' }[lang] + '</p><div class="choice">' + FACE_ID.map(function (id, i) { return '<button data-face="' + id + '" aria-pressed="' + (S.face === id) + '">' + FACES[lang][i] + '</button>'; }).join('') + '</div>';
+    var c = cfg(), l = L(), lang = P().lang, keep = S.face, val = function (key) { var o = OPTS(key).list.filter(function (x) { return String(x[0]) === String(c[key]); })[0]; return o ? o[1] : ''; },
+        row = function (key, label) { return '<button class="srow" data-act="pick" data-k="' + key + '"><span class="sico">' + ic(OPTS(key).ic) + '</span><span class="slab">' + label + '</span><span class="sval">' + val(key) + '</span>' + ic('chev', 'mir') + '</button>'; },
+        h = '<div class="h1">' + l.me + '</div><p class="lbl">' + { he: 'עיצוב השעון', ar: 'شكل الساعة', fr: 'Modèle de cadran' }[lang] + '</p><div class="fthumbs">';
+    FACE_ID.forEach(function (id, i) { S.face = id; h += '<button class="fthumb" data-face="' + id + '" aria-pressed="' + (keep === id) + '"><span class="fprev"' + (id === 'layla' ? ' data-tone="dark"' : '') + '>' + dialSVG(M, 'full') + '</span><span>' + FACES[lang][i] + '</span></button>'; }); S.face = keep;
+    h += '</div><p class="lbl">' + { he: 'ההגדרות שלי', ar: 'إعداداتي', fr: 'Mes réglages' }[lang] + '</p><div class="sgroup">' + row('city', l.city) +
+      (S.p === 'hatadhar' ? row('rite', 'נוסח') + row('opinion', 'שיטה') : S.p === 'awqat' ? row('method', 'طريقة الحساب') + row('asr', 'وقت العصر') : row('wake', 'Réveil habituel')) + '</div>' +
+      '<div class="sgroup"><button class="srow" data-act="tab" data-i="' + (l.tabs[3] ? 3 : 2) + '"><span class="sico">' + ic('bell') + '</span><span class="slab">' + l.alerts + '</span>' + ic('chev', 'mir') + '</button>' +
+      (S.p === 'hatadhar' ? '<button class="srow" data-act="tab" data-i="2"><span class="sico">' + ic('gift') + '</span><span class="slab">ימי הולדת ואזכרות</span><span class="sval">' + S.events.length + '</span>' + ic('chev', 'mir') + '</button>' : '') + '</div>';
     if (S.p === 'hatadhar') h += '<div class="card"><h4>תמיכה בפרויקט</h4><p>האפליקציה חינמית, בלי פרסומות. אפשר לתרום, או להקדיש יום לעילוי נשמת או לרפואה שלמה.</p><button class="cta">הקדשת יום</button></div>';
     if (S.p === 'awqat') h += '<div class="card"><h4>النسخة الكاملة</h4><p>شراء واحد مدى الحياة. بلا إعلانات وبلا اشتراك. موقعك لا يغادر هاتفك.</p><button class="cta">عرض النسخة الكاملة</button></div>';
     if (S.p === 'kairos') h += '<div class="card"><h4>Essai de 7 jours</h4><p>Vous le démarrez vous-même. Rien n’est prélevé à la fin.</p><ol class="steps"><li>Aujourd’hui<small>Tout est ouvert, sans carte bancaire.</small></li><li>Jour 5<small>Un rappel, une seule fois.</small></li><li>Jour 7<small>L’essai s’arrête. Vous choisissez : 4,99 € par mois ou 34,99 € par an.</small></li></ol><button class="cta">Démarrer l’essai</button></div>';
@@ -254,6 +316,14 @@
       .then(function (parts) { if (x.after) parts[0].splice(1, 0, x.after); return (tcache[id] = parts); }); }
   function textHTML(id) { return tcache[id].map(function (vs) { return '<p>' + vs.map(esc).join(' ') + '</p>'; }).join(''); }
   function sheetHTML() {
+    var frame = function (title, icn, sub, body) { return '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="' + esc(title) + '"><div class="row between"><div class="row"><span class="sic">' + ic(icn) + '</span><div><b class="st">' + title + '</b><small class="meta">' + sub + '</small></div></div><button class="xbtn" data-act="close" aria-label="' + esc(L().dir) + '">' + ic('x') + '</button></div>' + body + '</div>'; },
+        opt = function (act, k, v, on, lab, sub) { return '<button class="opt" data-act="' + act + '" data-k="' + k + '" data-v="' + v + '" aria-pressed="' + on + '"><span><b>' + lab + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</span><i class="radio"></i></button>'; };
+    if (S.sheet && S.sheet.indexOf('pick:') === 0) { var pk = S.sheet.slice(5), po = OPTS(pk); return frame(po.t, po.ic, '', '<div class="opts">' + po.list.map(function (x) { return opt('set', pk, x[0], String(cfg()[pk]) === String(x[0]), x[1], x[2]); }).join('') + '</div>'); }
+    if (S.sheet === 'addev') { var az = tz(), ad = S.calSel || calNoon(dayInstant(M)), dr = S.draft;
+      return frame('הוספה ליומן', dr.type === 'azkara' ? 'flame' : dr.type === 'bday' ? 'gift' : 'bell', hebDate(ad, az, 1), '<p class="lbl">סוג</p><div class="seg2 wide">' + Object.keys(EVT).map(function (k) { return '<button data-act="draft" data-k="type" data-v="' + k + '" aria-pressed="' + (dr.type === k) + '">' + EVT[k] + '</button>'; }).join('') + '</div>' +
+        '<p class="lbl">שם</p><input class="inp" data-draft="name" value="' + esc(dr.name) + '" maxlength="40" aria-label="שם" autocomplete="off">' +
+        '<div class="card flat"><div class="row"><span class="ri">' + ic('cal') + '</span><div><b>' + hebDate(ad, az) + '</b><small class="meta">חוזר כל שנה, לפי התאריך העברי</small></div></div></div>' +
+        '<p class="lbl">התראה</p><div class="opts">' + REMS.map(function (r) { return opt('draft', 'remind', r[0], dr.remind === r[0], r[1], r[0] === 'eve' ? 'היום העברי מתחיל בלילה: ההתראה מגיעה בצאת הכוכבים' : ''); }).join('') + '</div><button class="cta" data-act="evsave">שמירה</button>'); }
     var p = I.PRAY[S.sheet]; if (!p) return '';
     var rite = { edot: 'נוסח עדות המזרח', sfard: 'נוסח ספרד', ashkenaz: 'נוסח אשכנז' }[cfg().rite], tid = S.text || (S.sheet === 'shema' ? 'shema' : null), body;
     if (tid) body = (S.text ? '<button class="backrow" data-act="untext">' + ic('chev', 'mir flipx') + '<span>' + p.t + '</span></button>' : '') + '<div class="ptext long" data-text="' + tid + '">' + (tcache[tid] ? textHTML(tid) : '<span class="meta">טוען…</span>') + '</div><p class="meta src">הנוסח: מקרא על פי המסורה (ויקיטקסט, CC BY-SA), דרך ספריא.</p>';
@@ -322,13 +392,13 @@
     root.dataset.p = S.p; root.dataset.theme = G.pref; root.dataset.face = S.face; root.dataset.shabbat = shab ? '1' : '';
     root.style.setProperty('--g', rgb(k.tri[1])); root.style.setProperty('--skybg', k.plain ? '#000' : 'linear-gradient(180deg,' + rgb(k.tri[0]) + ' 0%,' + rgb(k.tri[1]) + ' 46%,' + rgb(k.tri[2]) + ' 100%)');
     var whatFull = S.p === 'kairos' ? m.window.name : remText(m.remaining) + ' ' + w.what;
-    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), greg: S.p === 'kairos' ? '' : new Intl.DateTimeFormat(m.product.lang + '-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(m.now), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT + (S.face === 'otiot' && S.p === 'hatadhar' ? ' · שעה ' + HOURS.he[Math.min(11, Math.floor(m.frac * 12))] + '׳' : ''), untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
+    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: wdText(m), dayline: wdText(m) + (S.p === 'kairos' ? ' ' : ' · ') + dateText(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT + (S.face === 'otiot' && S.p === 'hatadhar' ? ' · שעה ' + HOURS.he[Math.min(11, Math.floor(m.frac * 12))] + '׳' : ''), untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
       bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih, shabcap: shab ? l.shabbat : '',
       shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '' };
-    var hv = { big: remBig(m.remaining), mooncard: moonCard(m),
+    var hv = { big: remBig(m.remaining), mooncard: moonCard(m), greg: gregHTML(m),
       wbadge: shab ? '<span class="badge shab">' + ic('candles') + 'שבת</span>' : '',
       wnow: '<span class="cic">' + ic(w.ic) + '</span><div><b>' + remPlain(m.remaining) + '</b><small>' + esc(w.what) + '</small></div>',
-      wday: S.p === 'hatadhar' ? '<div class="wttl">' + weekday(m) + ' · ' + dateText(m) + '</div>' + (shab ? '<p class="wnote">' + l.shabbatMode + '</p>' : '') + '<div class="wmoon"><span class="moonbig">' + moonSVG(m) + '</span><div><b>' + phaseName(m) + '</b><small>' + levana(m).text + '</small></div></div><ul class="wl">' + [['שקיעה', m.today.shkia], [m.today.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', m.today.tzet]].map(function (r) { return '<li>' + rowIc(r[0]) + '<span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>'
+      wday: S.p === 'hatadhar' ? '<div class="wttl">' + wdText(m) + ' · ' + dateText(m) + '</div>' + (shab ? '<p class="wnote">' + l.shabbatMode + '</p>' : '') + '<div class="wmoon"><span class="moonbig">' + moonSVG(m) + '</span><div><b>' + phaseName(m) + '</b><small>' + levana(m).text + '</small></div></div><ul class="wl">' + [['שקיעה', m.today.shkia], [m.today.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', m.today.tzet]].map(function (r) { return '<li>' + rowIc(r[0]) + '<span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>'
           : S.p !== 'kairos' ? '' : '<div class="wttl">Lumière et repères</div><ul class="wl">' + [['Lumière avant', m.marks.lumiere, 'sunrise'], ['Dernière caféine', m.marks.cafeine, 'cup'], ['Coucher', m.marks.coucher, 'bed']].map(function (r) { return '<li><span class="ri">' + ic(r[2]) + '</span><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>' };
     $$('[data-t]', root).forEach(function (e) { var x = v[e.dataset.t]; if (x != null && e.textContent !== String(x)) e.textContent = x; });
     $$('[data-h]', root).forEach(function (e) { var x = hv[e.dataset.h]; if (x != null && e.innerHTML !== x) e.innerHTML = x; });
@@ -416,7 +486,14 @@
     if (a === 'day') { S.now = new Date(+S.now + b.dataset.d * 864e5); return paint(); }
     if (a === 'goto') { S.now = new Date(+S.now + b.dataset.d * 864e5); S.screen = 1; renderPhone(); return paint(); }
     if (a === 'sw') { var on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); S.off[S.p + b.dataset.k] = on; return; }
-    if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; return render(); }
+    if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; S.sheet = null; return render(); }
+    if (a === 'pick') { S.sheet = 'pick:' + b.dataset.k; return sheet(); }
+    if (a === 'calview') { S.calView = b.dataset.v; renderPhone(); return paint(); }
+    if (a === 'calsel') { S.calSel = new Date(+b.dataset.t0); S.calMon = S.calSel; renderPhone(); return paint(); }
+    if (a === 'mon') { var mo = hmonth(S.calMon || S.calSel || calNoon(dayInstant(M)), tz()); S.calMon = calNoon(new Date(+b.dataset.d > 0 ? +mo.days[mo.days.length - 1].date + 4 * 864e5 : +mo.days[0].date - 4 * 864e5)); renderPhone(); return paint(); }
+    if (a === 'addev') { S.sheet = 'addev'; return sheet(); }
+    if (a === 'draft') { S.draft[b.dataset.k] = b.dataset.v; return sheet(); }
+    if (a === 'evsave') { var ed = S.calSel || calNoon(dayInstant(M)), eh = hparts(ed, tz()); S.events.push({ type: S.draft.type, name: S.draft.name.trim() || EVT[S.draft.type], m: eh.m, d: eh.d, remind: S.draft.remind }); S.draft.name = ''; S.sheet = null; S.calSel = ed; S.screen = 2; S.calView = 'month'; renderPhone(); return paint(); }
     if (a === 'tasbih') { S.tasbih = (S.tasbih + 1) % 34; return paint(); }
     if (a === 'open') { S.sheet = b.dataset.s; S.text = null; S.flash = false; return sheet(); }
     if (a === 'close') { S.sheet = null; S.text = null; S.flash = false; return sheet(); }
@@ -426,6 +503,7 @@
     if (a === 'shabbat') { S.shabbatOn = !S.shabbatOn; sheet(); return paint(); }
     if (a === 'prayed') { S.prayed[b.dataset.k] = !S.prayed[b.dataset.k]; return paint(); }
   });
+  document.addEventListener('input', function (ev) { var k = ev.target.dataset && ev.target.dataset.draft; if (k) S.draft[k] = ev.target.value; });
   var tEl = $('#t'); if (tEl) tEl.addEventListener('input', function () { stop(); var w = T.wall(S.now, tz()); S.now = T.fromWall(w.y, w.m, w.d, this.value / 60, tz()); paint(); });
   var timer = null;
   function play() { S.playing = true; var b = $('[data-go=play]'); if (b) { b.setAttribute('aria-pressed', true); b.textContent = 'Pause'; } timer = setInterval(function () { S.now = new Date(+S.now + 2 * T.MIN); paint(); }, 60); }
