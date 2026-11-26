@@ -78,16 +78,18 @@
     return { theme: light ? 'light' : 'dark', bg: 'linear-gradient(180deg,' + rgb(tri[0]) + ' 0%,' + rgb(tri[1]) + ' 46%,' + rgb(tri[2]) + ' 100%)', g: rgb(tri[1]), sky: true,
              stars: clamp((-m.alt - 3) / 9, 0, 1) * (1 - cloud() * 0.92), clouds: cloud(), rain: S.wx === 'rain' };
   }
-  function skyHTML() { return '<div class="sky" data-sky><i class="stars"></i><i class="clouds"></i><i class="rain"></i></div>'; }
-  function orbHTML(m) {
-    var o = '', k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2;
-    function pos(p) { return 'left:' + clamp((p.az - 60) / 240 * 88 + 6, 4, 96).toFixed(1) + '%;top:' + (58 - clamp(p.alt, 0, 70) / 70 * 52).toFixed(1) + 'px'; }
-    if (m.sky.sun.alt > -1) o += '<i class="orb sun" style="' + pos(m.sky.sun) + ';opacity:' + (1 - cloud() * 0.7).toFixed(2) + '"></i>';
-    if (m.sky.moon.alt > 0 && m.alt < 6) o += '<i class="orb moonorb" style="' + pos(m.sky.moon) + ';opacity:' + (1 - cloud() * 0.75).toFixed(2) + '">' + moonSVG(m) + '</i>';
-    return o;
+  function skyHTML() { return '<div class="sky" data-sky></div>'; }
+  function mix(a, b, t) { return a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }); }
+  /** Ce que le canevas du ciel doit peindre à cet instant (voir sky.js). */
+  function skyDraw(m, sk) {
+    var tri = skyTriple(m.alt), c = cloud(), light = sk.theme === 'light', sunX = clamp((m.sky.sun.az - 60) / 240, 0.06, 0.94), yOf = function (alt) { return 0.42 - clamp(alt, 0, 75) / 75 * 0.32; };
+    return { grad: [[0, rgb(tri[0])], [0.24, rgb(mix(tri[0], tri[1], 0.55))], [0.5, rgb(tri[1])], [0.78, rgb(mix(tri[1], tri[2], 0.6))], [1, rgb(tri[2])]],
+      glow: clamp(1 - Math.abs(m.alt) / 10, 0, 1) * (1 - c * 0.85), sunX: sunX, stars: sk.stars, rot: (+m.now / 86164090.5) * 2 * Math.PI % (2 * Math.PI),
+      sun: m.sky.sun.alt > -2 ? { x: sunX, y: yOf(m.sky.sun.alt), a: 1 - c * 0.8, warm: clamp(1 - m.sky.sun.alt / 14, 0, 1) } : null,
+      moon: m.sky.moon.alt > 0 && m.alt < 6 ? { x: clamp((m.sky.moon.az - 60) / 240, 0.06, 0.94), y: yOf(m.sky.moon.alt), p: m.moon, a: +(1 - c * 0.85).toFixed(2) } : null,
+      cloud: c, rain: S.wx === 'rain', cloudRGB: light ? (c > 0.6 ? '226,231,238' : '255,255,255') : '142,152,180', veilRGB: light ? (S.wx === 'rain' ? '104,114,130' : '176,184,194') : '16,20,32', rainRGB: light ? '244,248,253' : '186,202,230' };
   }
-  function moonSVG(m) { var k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2, dx = (m.moon < 0.5 ? -1 : 1) * 2 * 11 * k;
-    return '<svg viewBox="0 0 24 24"><clipPath id="mclip"><circle cx="12" cy="12" r="11"/></clipPath><circle cx="12" cy="12" r="11" fill="#F1F3F8"/><circle cx="' + (12 + dx).toFixed(2) + '" cy="12" r="11" fill="#5F6A82" clip-path="url(#mclip)"/></svg>'; }
+  function moonSVG(m) { return '<svg viewBox="0 0 24 24"><defs><radialGradient id="mgd" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#CBD3E4"/></radialGradient></defs><circle cx="12" cy="12" r="11" fill="currentColor" opacity=".12"/><path d="' + D2Sky.moonPath(12, 12, 11, m.moon) + '" fill="url(#mgd)"/></svg>'; }
 
   /* ---------- le cadran ----------
    * Rond sur le téléphone. Sur la montre, une superellipse qui épouse le boîtier : tout l'écran sert,
@@ -108,7 +110,7 @@
     // l'anneau : le cycle qui se consomme, coloré par la lumière réelle de chaque instant
     o.push(P(line(g, 0, 360, 0) + 'Z', 'var(--track)', g.rw));
     if (mono) o.push(P(line(g, 0, Math.max(now, 1), 0), 'var(--mute)', g.rw));
-    else { o.push(P(line(g, 0, Math.max(now, 0.5), 0), 'var(--edge)', g.rw + (key === 'mini' ? 8 : 3.4))); for (i = 0; i < n; i++) o.push(P(line(g, i * 3, i * 3 + 3.5, 0), cols[i], g.rw)); if (now > n * 3) o.push(P(line(g, n * 3, now, 0), cols[Math.min(n, 119)], g.rw)); }
+    else { o.push('<g class="ringg">'); for (i = 0; i < n; i++) o.push(P(line(g, i * 3, i * 3 + 3.5, 0), cols[i], g.rw)); if (now > n * 3) o.push(P(line(g, n * 3, now, 0), cols[Math.min(n, 119)], g.rw)); o.push('</g>'); }
     if (key !== 'mini') m.cycle.windows.forEach(function (w, j) { if (j) o.push(seg(g, m.angle(w.start), -g.rw / 2 - 4, -g.rw / 2 - 8, 'var(--mute)', 1.6)); });
     if (key === 'full') {
       for (i = 1; i < 12; i++) { var d = pt(g, i * 30, -49); o.push('<circle cx="' + d[0].toFixed(1) + '" cy="' + d[1].toFixed(1) + '" r="1.4" fill="var(--mute)" opacity=".6"/>'); }
@@ -121,12 +123,12 @@
     if (key !== 'mini') o.push(seg(g, w1, di - g.iw / 2 - 4, di + g.iw / 2 + 4, 'var(--ink)', 2.6));
     // l'encoche du haut : l'ancre du cycle
     o.push(seg(g, 0, -g.rw / 2 - (key === 'mini' ? 2 : 5), g.rw / 2 + (key === 'mini' ? 2 : 5), 'var(--ink)', key === 'mini' ? 9 : 3.2));
-    // l'astre du moment
-    if (!mono) { var c = pt(g, now, 0), r = key === 'mini' ? 15 : g.rw * 0.95, cx = c[0].toFixed(1), cy = c[1].toFixed(1);
-      o.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + (key === 'mini' ? 7 : 3)) + '" fill="var(--g)"/>');
-      if (m.isNight) { var k = (1 - Math.cos(2 * Math.PI * m.moon)) / 2, dx = (m.moon < 0.5 ? -1 : 1) * 2 * r * k, id = 'mc' + key + S.p;
-        o.push('<clipPath id="' + id + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/></clipPath><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#F1F3F8"/><circle cx="' + (c[0] + dx).toFixed(1) + '" cy="' + cy + '" r="' + r + '" fill="#5F6A82" clip-path="url(#' + id + ')"/>'); }
-      else o.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#FFD76A" stroke="#F0A93B" stroke-width="1.2"/>'); }
+    // l'astre du moment : un soleil avec son halo, une lune avec sa phase — jamais un simple point
+    if (!mono) { var c = pt(g, now, 0), r = key === 'mini' ? 16 : g.rw * 1.05, cx = c[0].toFixed(1), cy = c[1].toFixed(1), id = key + S.p;
+      if (m.isNight) o.push('<defs><radialGradient id="mh' + id + '"><stop offset="0" stop-color="#DCE5FF" stop-opacity=".55"/><stop offset="1" stop-color="#DCE5FF" stop-opacity="0"/></radialGradient><radialGradient id="mb' + id + '" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#C9D1E3"/></radialGradient></defs>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 2.6).toFixed(1) + '" fill="url(#mh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#AEB9D6" opacity=".2"/><path d="' + D2Sky.moonPath(+cx, +cy, r, m.moon) + '" fill="url(#mb' + id + ')"/>');
+      else o.push('<defs><radialGradient id="sh' + id + '"><stop offset="0" stop-color="#FFE08A" stop-opacity=".8"/><stop offset=".45" stop-color="#FFC95A" stop-opacity=".3"/><stop offset="1" stop-color="#FFC95A" stop-opacity="0"/></radialGradient><radialGradient id="sb' + id + '"><stop offset="0" stop-color="#FFFDF0"/><stop offset=".55" stop-color="#FFE585"/><stop offset="1" stop-color="#FFB53E"/></radialGradient></defs>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 3).toFixed(1) + '" fill="url(#sh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="url(#sb' + id + ')"/>'); }
     return '<svg class="dial" viewBox="0 0 ' + g.w + ' ' + g.h + '" role="img" aria-label="' + esc(remText(m.remaining) + ' ' + win(m.window).what) + '">' + o.join('') + '</svg>';
   }
   /* La boussole : la rose tourne avec l'appareil, le Temple (ou la Kaaba), le soleil et la lune y sont à leur place réelle. */
@@ -143,10 +145,10 @@
     o.push('<path d="M160 44l-8 -16h16z" fill="var(--acc)"/>');
     return '<svg class="dial" viewBox="0 0 320 320" aria-hidden="true">' + o.join('') + '</svg>';
   }
-  function centerHTML(mono) { return '<div class="center">' + (mono ? '' : '<span class="cic" data-ic="win"></span>') + '<strong data-h="big"></strong><b class="what" data-t="what"></b>' + (mono ? '' : '<small data-t="untilT"></small>') + '</div>'; }
+  function centerHTML(mono) { return '<div class="center">' + (mono ? '' : '<span class="shabcap" data-t="shabcap"></span><span class="cic" data-ic="win"></span>') + '<strong data-h="big"></strong><b class="what" data-t="what"></b>' + (mono ? '' : '<small data-t="untilT"></small>') + '</div>'; }
   function dialBox(key, flippable, side, mono) {
     var back = flippable ? '<div class="face back"><div data-cmp></div><div class="cmp-c"><strong data-t="bear"></strong><b data-t="target"></b><small data-t="dist"></small><small data-t="salt"></small></div></div>' : '';
-    return '<div class="dialbox" data-dial="' + key + '"' + (mono ? ' data-mono="1"' : '') + ' data-side="' + (side || 'front') + '"><div class="flip"><div class="face">' +
+    return '<div class="dialbox" data-dial="' + key + '"' + (mono ? ' data-mono="1"' : '') + ' data-side="' + (side || 'front') + '">' + (mono || key === 'mini' ? '' : '<i class="glass"></i>') + '<div class="flip"><div class="face">' +
       (flippable ? '<button class="dialbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' : '<div class="dialbtn">') + '<span data-svg></span>' + (flippable ? '</button>' : '</div>') + (key === 'mini' ? '' : centerHTML(mono)) + '</div>' + back + '</div></div>';
   }
 
@@ -157,9 +159,9 @@
   function isOn(key, def) { var k = S.p + key; return S.off[k] == null ? def : S.off[k]; }
   function scrDial() {
     return '<div class="row between"><button class="pill" data-act="tab" data-i="4">' + ic('pin') + '<span data-t="city"></span></button><span class="meta" data-t="date"></span></div>' +
-      '<div class="band"><div data-orb></div><div class="badges" data-h="badges"></div></div>' +
-      '<div class="dialwrap">' + (M.target ? '<button class="fbtn" data-act="flip" aria-label="' + esc(L().dir) + '">' + ic(S.p === 'hatadhar' ? 'temple' : 'compass') + '</button>' : '') + dialBox('full', !!M.target, S.side) + '</div>' +
-      '<div data-h="action"></div><p class="lbl">' + L().next + '</p><div class="next" data-list="next"></div>';
+      '<div class="dialwrap">' + (M.target ? '<button class="fbtn" data-act="flip" aria-label="' + esc(L().dir) + '" data-fbtn></button>' : '') + dialBox('full', !!M.target, S.side) +
+      (M.target ? '<div class="pg" data-pg><button data-act="flipto" data-s="front" aria-label="' + esc(L().tabs[0]) + '"><i></i></button><button data-act="flipto" data-s="back" aria-label="' + esc(L().dir) + '"><i></i></button></div>' : '') + '</div>' +
+      '<div class="next" data-list="next"></div>';
   }
   function scrLouah() {
     return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="−1">' + ic('chev', 'mir') + '</button><div style="text-align:center"><div class="h1" style="margin:0" data-t="date"></div><div class="meta" data-t="wd"></div></div>' +
@@ -189,14 +191,24 @@
     return h;
   }
   /* Le tfilon contextuel : la prière du moment, ouverte d'un geste. */
+  /* Deux textes complets, chargés à la source (Sefaria, « Miqra selon la Massora ») plutôt qu'écrits de mémoire.
+   * Les signes de cantillation sont retirés ; le Nom est rendu comme dans les sidourim. */
+  var TEXTS = { shema: { t: 'קריאת שמע', refs: ['Deuteronomy.6.4-9', 'Deuteronomy.11.13-21', 'Numbers.15.37-41'], after: 'בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד.' }, ashrei: { t: 'אשרי', refs: ['Psalms.84.5', 'Psalms.144.15', 'Psalms.145', 'Psalms.115.18'] } }, tcache = {};
+  function cleanHe(s) { return String(s).replace(/<[^>]+>/g, '').replace(/&[a-z]+;/g, ' ').replace(/\{[פס]\}/g, '').replace(/[֑-ֽ֯׀]/g, '').replace(/׃/g, '.')
+    .replace(/י[ְ-ׇּׁׂ]*ה[ְ-ׇּׁׂ]*ו[ְ-ׇּׁׂ]*ה(?![ְ-ׇא-ת])/g, 'יְיָ').replace(/\s+/g, ' ').trim(); }
+  function loadText(id) { var x = TEXTS[id]; if (tcache[id]) return Promise.resolve(tcache[id]);
+    return Promise.all(x.refs.map(function (r) { return fetch('https://www.sefaria.org/api/texts/' + r + '?context=0&commentary=0').then(function (q) { return q.json(); }).then(function (d) { return [].concat(d.he).map(cleanHe); }); }))
+      .then(function (parts) { if (x.after) parts[0].splice(1, 0, x.after); return (tcache[id] = parts); }); }
+  function textHTML(id) { return tcache[id].map(function (vs) { return '<p>' + vs.map(esc).join(' ') + '</p>'; }).join(''); }
   function sheetHTML() {
     var p = I.PRAY[S.sheet]; if (!p) return '';
-    var rite = { edot: 'נוסח עדות המזרח', sfard: 'נוסח ספרד', ashkenaz: 'נוסח אשכנז' }[cfg().rite];
-    return '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="' + esc(p.t) + '"><div class="row between"><div class="row"><span class="sic">' + ic(p.ic) + '</span><div><b class="st">' + p.t + '</b><small class="meta">' + rite + '</small></div></div><button class="xbtn" data-act="close" aria-label="סגירה">' + ic('x') + '</button></div>' +
-      (p.text ? '<p class="ptext">' + p.text + '</p>' : '') +
-      (p.rows.length ? '<ol class="prows">' + p.rows.map(function (r) { var am = r === 'עמידה'; return '<li><button' + (am ? ' data-act="amida"' : '') + '><span>' + r + '</span>' + (am ? '<small>' + ic('temple') + 'לכיוון בית המקדש</small>' : ic('chev', 'mir')) + '</button></li>'; }).join('') + '</ol>' : '') +
+    var rite = { edot: 'נוסח עדות המזרח', sfard: 'נוסח ספרד', ashkenaz: 'נוסח אשכנז' }[cfg().rite], tid = S.text || (S.sheet === 'shema' ? 'shema' : null), body;
+    if (tid) body = (S.text ? '<button class="backrow" data-act="untext">' + ic('chev', 'mir flipx') + '<span>' + p.t + '</span></button>' : '') + '<div class="ptext long" data-text="' + tid + '">' + (tcache[tid] ? textHTML(tid) : '<span class="meta">טוען…</span>') + '</div><p class="meta src">הנוסח: מקרא על פי המסורה (ויקיטקסט, CC BY-SA), דרך ספריא.</p>';
+    else body = (p.text ? '<p class="ptext">' + p.text + '</p>' : '') +
+      (p.rows.length ? '<ol class="prows">' + p.rows.map(function (r) { var am = r === 'עמידה', as = r === 'אשרי'; return '<li><button' + (am ? ' data-act="amida"' : as ? ' data-act="text" data-x="ashrei"' : '') + '><span>' + r + '</span>' + (am ? '<small>' + ic('temple') + 'לכיוון בית המקדש</small>' : ic('chev', 'mir')) + '</button></li>'; }).join('') + '</ol>' : '') +
       (p.shabbat ? '<div class="al" style="border:0"><div><b>מצב שבת בשעון</b><small>ללא צליל, ללא רטט, אין צורך לגעת</small></div><button class="sw" role="switch" aria-checked="' + S.shabbatOn + '" data-act="shabbat" aria-label="מצב שבת"></button></div>' : '') +
-      '<p class="meta" style="margin-top:10px">הטקסט המלא יגיע ממקור מאושר, לפי הנוסח שנבחר.</p></div>' +
+      '<p class="meta" style="margin-top:10px">קריאת שמע ואשרי מוצגים במלואם. שאר התפילות יגיעו ממקור מאושר, לפי הנוסח שנבחר.</p>';
+    return '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="' + esc(p.t) + '"><div class="row between"><div class="row"><span class="sic">' + ic(p.ic) + '</span><div><b class="st">' + (S.text ? TEXTS[S.text].t : p.t) + '</b><small class="meta">' + rite + '</small></div></div><button class="xbtn" data-act="close" aria-label="סגירה">' + ic('x') + '</button></div>' + body + '</div>' +
       (S.flash ? '<div class="flash"><div class="fl-in">' + ic('temple') + '<b>לכיוון בית המקדש</b><small>' + Math.round(M.bearing) + '° · ' + Math.round(M.distance).toLocaleString('fr-FR') + ' ' + L().km + '</small></div></div>' : '');
   }
   function renderPhone() {
@@ -226,13 +238,14 @@
 
   /* ---------- peinture ---------- */
   function upcoming(m, n) { var t = +m.now, a = []; m.cycles.forEach(function (c) { c.windows.forEach(function (w) { if (+w.start > t && a.length < n) a.push(w); }); }); return a; }
-  function actionHTML(m) {
-    var w = win(m.window), h = '', day = T.wall(m.now, m.city.tz).d;
+  /* La prière du moment : une vignette épinglée en tête de la rangée, pas une barre au milieu de l'écran. */
+  function pinned(m) {
+    var w = win(m.window), h = '', day = T.wall(m.now, m.city.tz).d, now = { he: 'עכשיו', ar: 'الآن', fr: '' }[P().lang];
     if (S.p === 'hatadhar') {
-      if (w.act) h += '<button class="act" data-act="open" data-s="' + w.act + '">' + ic(I.PRAY[w.act].ic) + '<span>' + I.ACT[w.act] + '</span>' + ic('chev', 'mir') + '</button>';
-      if (m.isNight && levana(m).open && m.sky.moon.alt > 0) h += '<button class="act ghost" data-act="open" data-s="levana">' + ic('night') + '<span>ברכת הלבנה</span>' + ic('chev', 'mir') + '</button>';
-    } else if (S.p === 'awqat' && w.act) { var k = m.window.id + day, done = !!S.prayed[k]; h += '<button class="act' + (done ? ' done' : '') + '" data-act="prayed" data-k="' + k + '">' + ic(done ? 'check' : w.ic) + '<span>' + (done ? 'صلّيت · ' + m.window.name : 'صلّيت') + '</span></button>'; }
-    return h ? '<div class="acts">' + h + '</div>' : '';
+      if (w.act) h += '<button class="tile pin" data-act="open" data-s="' + w.act + '"><span class="ri">' + ic(I.PRAY[w.act].ic) + '</span><span><small>' + now + '</small><span>' + I.ACT[w.act] + '</span></span></button>';
+      if (m.isNight && levana(m).open && m.sky.moon.alt > 0) h += '<button class="tile pin2" data-act="open" data-s="levana"><span class="ri">' + ic('night') + '</span><span><small>הלילה</small><span>ברכת הלבנה</span></span></button>';
+    } else if (S.p === 'awqat' && w.act) { var k = m.window.id + day, done = !!S.prayed[k]; h += '<button class="tile pin' + (done ? ' done' : '') + '" data-act="prayed" data-k="' + k + '"><span class="ri">' + ic(done ? 'check' : w.ic) + '</span><span><small>' + esc(m.window.name) + '</small><span>صلّيت</span></span></button>'; }
+    return h;
   }
   function moonCard(m) {
     if (S.p === 'kairos') return '';
@@ -246,11 +259,9 @@
     root.style.setProperty('--g', sk.g); root.style.setProperty('--skybg', sk.bg);
     var whatFull = S.p === 'kairos' ? m.window.name : remText(m.remaining) + ' ' + w.what;
     var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT, untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
-      bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih,
+      bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih, shabcap: shab ? l.shabbat : '',
       shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '' };
-    var badge = shab ? '<span class="badge shab">' + ic('candles') + l.shabbat + '</span>' : '';
-    var lv = S.p === 'hatadhar' && m.isNight && levana(m).open ? '<span class="badge">' + ic('night') + 'ברכת הלבנה' + '</span>' : '';
-    var hv = { big: remBig(m.remaining), badges: badge + lv, action: actionHTML(m), mooncard: moonCard(m),
+    var hv = { big: remBig(m.remaining), mooncard: moonCard(m),
       wbadge: shab ? '<span class="badge shab">' + ic('candles') + 'שבת</span>' : '',
       wnow: '<span class="cic">' + ic(w.ic) + '</span><div><b>' + remPlain(m.remaining) + '</b><small>' + esc(w.what) + '</small></div>',
       wday: S.p === 'hatadhar' ? '<div class="wttl">' + weekday(m) + ' · ' + dateText(m) + '</div>' + (shab ? '<p class="wnote">' + l.shabbatMode + '</p>' : '') + '<div class="wmoon"><span class="moonbig">' + moonSVG(m) + '</span><div><b>' + phaseName(m) + '</b><small>' + levana(m).text + '</small></div></div><ul class="wl">' + [['שקיעה', m.today.shkia], [m.today.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', m.today.tzet]].map(function (r) { return '<li>' + rowIc(r[0]) + '<span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>'
@@ -260,12 +271,14 @@
     $$('[data-ic]', root).forEach(function (e) { if (e.dataset.cur !== w.ic) { e.dataset.cur = w.ic; e.innerHTML = ic(w.ic); } });
     $$('[data-dial]', root).forEach(function (e) { $('[data-svg]', e).innerHTML = dialSVG(m, e.dataset.dial, !!e.dataset.mono); e.classList.toggle('urgent', m.remaining < 10 * T.MIN); var c = $('[data-cmp]', e); if (c) c.innerHTML = compassSVG(m); });
     $$('[data-bar]', root).forEach(function (e) { e.style.width = (100 * (1 - m.windowFrac)).toFixed(1) + '%'; });
-    $$('[data-sky]', root).forEach(function (e) { e.hidden = !sk.sky; if (!sk.sky) return; $('.stars', e).style.opacity = sk.stars.toFixed(2); $('.clouds', e).style.opacity = (sk.clouds * 0.9).toFixed(2); $('.rain', e).style.opacity = sk.rain ? 1 : 0; });
-    $$('[data-orb]', root).forEach(function (e) { var h = sk.sky ? orbHTML(m) : ''; if (e.innerHTML !== h) e.innerHTML = h; });
+    var sd = sk.sky ? skyDraw(m, sk) : null;
+    $$('[data-sky]', root).forEach(function (e) { e.hidden = !sk.sky; if (!sk.sky) return; if (!e._sky) e._sky = new D2Sky.Sky(e); e._sky.set(sd); });
+    $$('[data-fbtn]', root).forEach(function (e) { var n = S.side === 'back' ? 'clock' : (S.p === 'hatadhar' ? 'temple' : 'compass'); if (e.dataset.cur !== n) { e.dataset.cur = n; e.innerHTML = ic(n); } });
+    $$('[data-pg]', root).forEach(function (e) { e.dataset.side = S.side; });
     var dayKey = S.p + JSON.stringify(cfg()) + T.wall(m.now, z).d;
     $$('[data-list]', root).forEach(function (e) {
       var k = e.dataset.list, h = '';
-      if (k === 'next') h = upcoming(m, 4).map(function (x) { return '<div><span class="ri">' + ic(win(x).ic) + '</span><span><small>' + hm(x.start, z) + '</small><span>' + esc(x.name) + '</span></span></div>'; }).join('');
+      if (k === 'next') h = pinned(m) + upcoming(m, 4).map(function (x) { return '<div class="tile"><span class="ri">' + ic(win(x).ic) + '</span><span><small>' + hm(x.start, z) + '</small><span>' + esc(x.name) + '</span></span></div>'; }).join('');
       if (k === 'wlist') h = upcoming(m, e.closest('.sfc') ? 3 : 3).map(function (x) { return '<li><span class="ri">' + ic(win(x).ic) + '</span><span>' + esc(x.name) + '</span><time>' + hm(x.start, z) + '</time></li>'; }).join('');
       if (k === 'louah') { var done = false; m.list.forEach(function (r) { var past = +r[1] <= +m.now; if (!past && !done) { done = true; h += '<li class="cur"><div class="row"><span class="cic">' + ic(w.ic) + '</span><div style="flex:1"><b>' + esc(whatFull) + '</b><div class="meta">' + esc(m.window.endLabel) + ' ' + endT + '</div></div><span class="meta">' + l.here + '</span></div><div class="bar"><i style="width:' + (100 * (1 - m.windowFrac)).toFixed(1) + '%"></i></div></li>'; }
         h += '<li class="' + (past ? 'past' : '') + '">' + rowIc(r[0]) + '<span>' + esc(r[0]) + '</span><time>' + hm(r[1], z) + '</time></li>'; }); }
@@ -283,7 +296,8 @@
   }
   function render() { M = T.compute(S.p, S.now, cfg()); renderPhone(); renderWatch(); renderSurfaces(); paint();
     $$('[data-prod]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.prod === S.p); }); $$('[data-for]').forEach(function (e) { e.hidden = e.dataset.for.split(' ').indexOf(S.p) < 0; }); }
-  function sheet() { $('[data-sheet]').innerHTML = sheetHTML(); }
+  function sheet() { $('[data-sheet]').innerHTML = sheetHTML(); var e = $('[data-text]'); if (!e || tcache[e.dataset.text]) return; var id = e.dataset.text, put = function (h) { var x = $('[data-text="' + id + '"]'); if (x) x.innerHTML = h; };
+    loadText(id).then(function () { put(textHTML(id)); }).catch(function () { put('<span class="meta">לא ניתן לטעון את הטקסט כרגע.</span>'); }); }
 
   /* ---------- interactions ---------- */
   function go(what) {
@@ -294,7 +308,12 @@
       S.now = what === 'shab' ? T.fromWall(w.y, w.m, w.d + add, 9.5, z) : what === 'erev' ? new Date((d.candles || d.asr) - 20 * T.MIN) : new Date(+(d.shkia || d.maghrib) + 12 * T.MIN); }
     S.shabbatOn = false; paint();
   }
+  var swiped = false;
+  /* Le cadran se retourne en boussole : par son bouton, par les deux points, ou d'un glissement. */
+  function flip(inW, to) { var box = $((inW ? '.wscr' : '.phone') + ' .dialbox'); if (!box) return; var s = to || (box.dataset.side === 'back' ? 'front' : 'back'); if (s === box.dataset.side) return; box.dataset.side = s; if (inW) S.wside = s; else S.side = s;
+    S.heading = 0; paint(); if (s === 'back') setTimeout(function () { S.heading = M.bearing; $$('.rose').forEach(function (r) { r.style.transform = 'rotate(' + (-S.heading).toFixed(1) + 'deg)'; }); }, 420); }
   document.addEventListener('click', function (ev) {
+    if (swiped) { swiped = false; return; }
     var b = ev.target.closest('[data-act],[data-prod],[data-go],[data-wx],[data-face]'); if (!b) return; var a = b.dataset.act;
     if (b.dataset.prod) { S.p = b.dataset.prod; S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; S.sheet = null; S.heading = 0; return render(); }
     if (b.dataset.wx != null) { S.wx = b.dataset.wx === 'rain' ? 'rain' : +b.dataset.wx; return paint(); }
@@ -303,16 +322,16 @@
     if (b.dataset.go) return go(b.dataset.go);
     if (a === 'tab') { S.screen = +b.dataset.i; S.side = 'front'; S.heading = 0; S.sheet = null; renderPhone(); return paint(); }
     if (a === 'wtab') { S.wscreen = +b.dataset.i; S.wside = 'front'; renderWatch(); return paint(); }
-    if (a === 'flip') { var inW = !!b.closest('.wscr'), box = $((inW ? '.wscr' : '.phone') + ' .dialbox'), s = box.dataset.side === 'back' ? 'front' : 'back'; box.dataset.side = s; if (inW) S.wside = s; else S.side = s;
-      // la rose tourne jusqu'à ce que le Temple soit en haut : l'appareil « s'aligne »
-      S.heading = 0; paint(); if (s === 'back') setTimeout(function () { S.heading = M.bearing; $$('.rose').forEach(function (r) { r.style.transform = 'rotate(' + (-S.heading).toFixed(1) + 'deg)'; }); }, 420); return; }
+    if (a === 'flip' || a === 'flipto') return flip(!!b.closest('.wscr'), b.dataset.s);
     if (a === 'day') { S.now = new Date(+S.now + b.dataset.d * 864e5); return paint(); }
     if (a === 'goto') { S.now = new Date(+S.now + b.dataset.d * 864e5); S.screen = 1; renderPhone(); return paint(); }
     if (a === 'sw') { var on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', on); S.off[S.p + b.dataset.k] = on; return; }
     if (a === 'set') { var v = b.dataset.v; cfg()[b.dataset.k] = isNaN(+v) ? v : +v; return render(); }
     if (a === 'tasbih') { S.tasbih = (S.tasbih + 1) % 34; return paint(); }
-    if (a === 'open') { S.sheet = b.dataset.s; S.flash = false; return sheet(); }
-    if (a === 'close') { S.sheet = null; S.flash = false; return sheet(); }
+    if (a === 'open') { S.sheet = b.dataset.s; S.text = null; S.flash = false; return sheet(); }
+    if (a === 'close') { S.sheet = null; S.text = null; S.flash = false; return sheet(); }
+    if (a === 'text') { S.text = b.dataset.x; return sheet(); }
+    if (a === 'untext') { S.text = null; return sheet(); }
     if (a === 'amida') { S.flash = true; sheet(); return setTimeout(function () { S.flash = false; if (S.sheet) sheet(); }, 2200); }
     if (a === 'shabbat') { S.shabbatOn = !S.shabbatOn; sheet(); return paint(); }
     if (a === 'prayed') { S.prayed[b.dataset.k] = !S.prayed[b.dataset.k]; return paint(); }
@@ -322,8 +341,9 @@
   function play() { S.playing = true; var b = $('[data-go=play]'); if (b) { b.setAttribute('aria-pressed', true); b.textContent = 'Pause'; } timer = setInterval(function () { S.now = new Date(+S.now + 2 * T.MIN); paint(); }, 60); }
   function stop() { S.playing = false; clearInterval(timer); var b = $('[data-go=play]'); if (b) { b.setAttribute('aria-pressed', false); b.textContent = 'Lecture'; } }
   setInterval(function () { if (!S.playing && Math.abs(Date.now() - S.now) < 9e4) { S.now = new Date(); paint(); } }, 20000);
-  var sx = null; document.addEventListener('pointerdown', function (e) { sx = e.target.closest('.wscr') ? e.clientX : null; });
-  document.addEventListener('pointerup', function (e) { if (sx == null) return; var d = e.clientX - sx; sx = null; if (Math.abs(d) < 30) return; var dir = (d < 0 ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1); S.wscreen = clamp(S.wscreen + dir, 0, 2); S.wside = 'front'; renderWatch(); paint(); });
+  var sx = null, zone = null; document.addEventListener('pointerdown', function (e) { zone = e.target.closest('.wscr') ? 'w' : (e.target.closest('.phone .dialwrap') && M.target ? 'd' : null); sx = zone ? e.clientX : null; });
+  document.addEventListener('pointerup', function (e) { if (sx == null) return; var d = e.clientX - sx; sx = null; if (Math.abs(d) < 30) return; swiped = true; setTimeout(function () { swiped = false; }, 60);
+    if (zone === 'd') return flip(false); var dir = (d < 0 ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1); S.wscreen = clamp(S.wscreen + dir, 0, 2); S.wside = 'front'; renderWatch(); paint(); });
   if (/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
   render();
   window.D2 = { S: S, render: render, paint: paint, go: go, T: T };

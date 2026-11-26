@@ -402,3 +402,60 @@ body.embed .wrap{padding:0 12px}
 .watchtext .chip[aria-pressed=true]{color:#0C0D10}
 .stars,.clouds,.rain{opacity:0}
 @media (max-width:520px){.top b{display:none}.top .wrap{gap:0}.tabs{margin-inline-start:0;width:100%;justify-content:space-between}.tabs a{padding:8px 11px;font-size:14px}}
+
+/* =====================================================================================
+   Itération 3 : ciel réaliste sur canevas (toujours derrière), matière « verre », cadran dominant.
+   ===================================================================================== */
+.sky{z-index:0}
+.skyc{position:absolute;inset:0;width:100%;height:100%;display:block}
+.dialwrap{margin-top:30px}
+.dialbox{width:min(100%,336px)}
+.glass{position:absolute;inset:1.5%;border-radius:50%;pointer-events:none;
+  background:linear-gradient(155deg,rgba(255,255,255,.13),rgba(8,14,34,.30) 50%,rgba(255,255,255,.07));
+  -webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.30),inset 0 -14px 28px rgba(255,255,255,.04),0 22px 44px rgba(0,0,0,.40)}
+.p[data-theme=light] .glass{background:linear-gradient(155deg,rgba(255,255,255,.55),rgba(255,255,255,.20) 50%,rgba(255,255,255,.36));border-color:rgba(255,255,255,.55);
+  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.8),inset 0 -14px 28px rgba(255,255,255,.12),0 22px 44px rgba(30,60,100,.20)}
+.p[data-face=layla] .glass,.p[data-face=sofer] .glass,.p[data-face=even] .glass{-webkit-backdrop-filter:none;backdrop-filter:none}
+.wfull .glass{inset:36px 34px;border-radius:38px;-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3)}
+.ringg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.35))}
+.p[data-theme=light] .ringg{filter:saturate(1.5) brightness(.84) drop-shadow(0 1px 2.5px rgba(10,40,80,.32))}
+.center strong{font-size:58px}
+.wscr .center strong{font-size:37px}
+.aod .center strong{font-size:22px}
+.shabcap{display:block;font-size:13px;font-weight:600;color:var(--acc);margin-bottom:4px}
+.shabcap:empty{display:none}
+.wscr .shabcap{font-size:11px;margin-bottom:1px}
+
+/* le verre : un reflet en haut, un filet clair, jamais un aplat */
+.pill,.tile,.tb,.fbtn,.card,.daynav button,.wk button,.list li.cur{border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.30),var(--shadow);
+  background-image:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%)}
+.p[data-theme=light] .pill,.p[data-theme=light] .tile,.p[data-theme=light] .tb,.p[data-theme=light] .fbtn,.p[data-theme=light] .card,.p[data-theme=light] .daynav button,.p[data-theme=light] .wk button,.p[data-theme=light] .list li.cur{border-color:rgba(255,255,255,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.85),var(--shadow)}
+
+/* la rangée : place pour les ombres (elles ne sont plus rognées), prière du moment épinglée */
+.next{gap:10px;margin:6px -22px 0;padding:14px 22px 28px;scroll-snap-type:none}
+.next>.tile{flex:none;display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:18px;min-height:58px;min-width:0;background-color:var(--s);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);color:var(--ink);text-align:start}
+.tile small{display:block;font-size:12.5px;color:var(--mute);font-variant-numeric:tabular-nums}
+.tile>span>span{display:block;font-size:14.5px;white-space:nowrap}
+.tile.pin{position:sticky;inset-inline-start:0;z-index:2;background-color:var(--acc);color:var(--on);font-weight:600}
+.tile.pin small{color:inherit;opacity:.82;font-weight:500}
+.tile.pin .ri,.tile.pin2 .ri{color:inherit}
+.tile.pin.done{background-color:var(--s);color:var(--ink)}
+.tile.pin2{border-color:var(--acc)}
+
+/* les deux points : on peut aussi glisser */
+.pg{display:flex;justify-content:center;gap:2px;margin-top:4px}
+.pg button{width:30px;height:24px;display:grid;place-items:center}
+.pg i{width:7px;height:7px;border-radius:9px;background:var(--ink);opacity:.32;transition:width .25s var(--ease),opacity .25s}
+.pg[data-side=front] button:first-child i,.pg[data-side=back] button:last-child i{opacity:1;width:20px}
+.fbtn{color:var(--ink)}
+.fbtn[data-cur=temple]{color:var(--gold)}
+
+/* le texte d'une prière */
+.sheet{max-height:86%}
+.ptext.long{font-size:22px;line-height:1.95;margin-top:12px}
+.ptext.long p{margin:0 0 14px}
+.backrow{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--mute);font-size:15px;margin-top:8px}
+.backrow svg{width:16px;height:16px}
+.src{margin-top:6px;font-size:12.5px}
