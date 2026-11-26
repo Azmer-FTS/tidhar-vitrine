@@ -10,7 +10,7 @@
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
 
   /* ---------- état ---------- */
-  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0,
+  var S = { p: 'hatadhar', now: new Date(), screen: 0, wscreen: 0, side: 'front', wside: 'front', playing: false, tasbih: 0, intro: 1,
             wx: 0, face: 'sky', sheet: null, flash: false, heading: 0, shabbatOn: false, prayed: {}, off: {},
             cfg: { hatadhar: { city: 'jerusalem', opinion: 'gra', rite: 'edot' }, awqat: { city: 'casablanca', method: 'mwl', asr: 'shafii' }, kairos: { city: 'paris', wake: 7 } } };
   var M = null;
@@ -62,42 +62,90 @@
   /* ---------- le ciel : la lumière réelle, puis la météo ---------- */
   var KF = [[-18, [7, 11, 31], [13, 20, 51], [19, 27, 64]], [-6, [20, 27, 68], [59, 47, 107], [122, 74, 120]], [-1.5, [58, 72, 130], [150, 100, 140], [226, 140, 120]],
             [3, [110, 160, 216], [236, 196, 160], [250, 228, 206]], [12, [111, 182, 242], [178, 217, 248], [240, 245, 248]], [90, [96, 172, 240], [170, 212, 247], [238, 244, 248]]];
-  function cloud() { return S.wx === 'rain' ? 1 : +S.wx; }
+  var still = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function wet() { return S.wx === 'rain' || S.wx === 'storm'; }
+  function cloud() { return wet() ? 1 : +S.wx; }
   function skyTriple(alt) {
-    var a = KF[0], b = KF[KF.length - 1], i, t = 0, c = cloud(), rain = S.wx === 'rain';
+    var a = KF[0], b = KF[KF.length - 1], i, t = 0, c = cloud(), dim = S.wx === 'storm' ? 0.6 : S.wx === 'rain' ? 0.78 : 1 - c * 0.08;
     if (alt <= a[0]) b = a; else if (alt >= b[0]) a = b; else for (i = 1; i < KF.length; i++) if (alt <= KF[i][0]) { a = KF[i - 1]; b = KF[i]; t = (alt - a[0]) / (b[0] - a[0]); break; }
+    // un ciel voilé garde son bleu ; c'est le couvert, puis la pluie, qui le grisent
     return [1, 2, 3].map(function (k) { var col = [0, 1, 2].map(function (j) { return a[k][j] + (b[k][j] - a[k][j]) * t; }), g = 0.3 * col[0] + 0.59 * col[1] + 0.11 * col[2];
-      return col.map(function (v) { v = v + (g - v) * c * 0.8; return Math.round(v * (rain ? 0.78 : 1 - c * 0.08)); }); });
+      return col.map(function (v) { v = v + (g - v) * c * c * 0.86; return Math.round(v * dim); }); });
   }
-  function rgb(c) { return 'rgb(' + c.join(',') + ')'; }
-  function skyState(m) {
-    var face = S.face, tri = skyTriple(m.alt), light = m.alt > -1.5;
-    if (face === 'sofer') return { theme: 'light', bg: '#EFE6D2', g: '#EFE6D2', sky: false };
-    if (face === 'even') return { theme: 'light', bg: 'linear-gradient(180deg,#EDE1CA,#DCCAA8)', g: '#E4D5B8', sky: false };
-    if (face === 'layla') return { theme: 'dark', bg: '#000', g: '#000', sky: false };
-    return { theme: light ? 'light' : 'dark', bg: 'linear-gradient(180deg,' + rgb(tri[0]) + ' 0%,' + rgb(tri[1]) + ' 46%,' + rgb(tri[2]) + ' 100%)', g: rgb(tri[1]), sky: true,
-             stars: clamp((-m.alt - 3) / 9, 0, 1) * (1 - cloud() * 0.92), clouds: cloud(), rain: S.wx === 'rain' };
-  }
+  function rgb(c) { return 'rgb(' + c.map(Math.round).join(',') + ')'; }
   function skyHTML() { return '<div class="sky" data-sky></div>'; }
   function mix(a, b, t) { return a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }); }
-  /** Ce que le canevas du ciel doit peindre à cet instant (voir sky.js). */
-  function skyDraw(m, sk) {
-    var tri = skyTriple(m.alt), c = cloud(), light = sk.theme === 'light', sunX = clamp((m.sky.sun.az - 60) / 240, 0.06, 0.94), yOf = function (alt) { return 0.42 - clamp(alt, 0, 75) / 75 * 0.32; };
-    return { grad: [[0, rgb(tri[0])], [0.24, rgb(mix(tri[0], tri[1], 0.55))], [0.5, rgb(tri[1])], [0.78, rgb(mix(tri[1], tri[2], 0.6))], [1, rgb(tri[2])]],
-      glow: clamp(1 - Math.abs(m.alt) / 10, 0, 1) * (1 - c * 0.85), sunX: sunX, stars: sk.stars, rot: (+m.now / 86164090.5) * 2 * Math.PI % (2 * Math.PI),
-      sun: m.sky.sun.alt > -2 ? { x: sunX, y: yOf(m.sky.sun.alt), a: 1 - c * 0.8, warm: clamp(1 - m.sky.sun.alt / 14, 0, 1) } : null,
-      moon: m.sky.moon.alt > 0 && m.alt < 6 ? { x: clamp((m.sky.moon.az - 60) / 240, 0.06, 0.94), y: yOf(m.sky.moon.alt), p: m.moon, a: +(1 - c * 0.85).toFixed(2) } : null,
-      cloud: c, rain: S.wx === 'rain', cloudRGB: light ? (c > 0.6 ? '226,231,238' : '255,255,255') : '142,152,180', veilRGB: light ? (S.wx === 'rain' ? '104,114,130' : '176,184,194') : '16,20,32', rainRGB: light ? '244,248,253' : '186,202,230' };
+  /** L'état du ciel à cet instant. Sert deux fois : au canevas qui le peint (sky.js) et au garde-fou qui mesure la lisibilité.
+   *  L'écran est une fenêtre : l'horizon passe sous le cadran, le zénith est en haut. Un soleil d'hiver, bas, passe donc
+   *  derrière le verre du cadran ; un soleil d'été passe au-dessus. */
+  function skyModel(m) {
+    var plain = S.face === 'layla', c = plain ? 0 : cloud(), light = m.alt > -1.5, tri = plain ? [[0, 0, 0], [0, 0, 0], [0, 0, 0]] : skyTriple(m.alt),
+        xOf = function (az) { return clamp((az - 60) / 240, 0.06, 0.94); }, yOf = function (alt) { return 0.60 - clamp(alt, 0, 90) / 90 * 0.54; };
+    return { plain: plain, tri: tri, c: c, wet: !plain && wet(), storm: !plain && S.wx === 'storm', light: light,
+      stops: [[0, tri[0]], [0.24, mix(tri[0], tri[1], 0.55)], [0.5, tri[1]], [0.78, mix(tri[1], tri[2], 0.6)], [1, tri[2]]],
+      glow: plain ? 0 : clamp(1 - Math.abs(m.alt) / 10, 0, 1) * (1 - c * 0.85), sunX: xOf(m.sky.sun.az),
+      sun: !plain && m.sky.sun.alt > -2 ? { x: xOf(m.sky.sun.az), y: yOf(m.sky.sun.alt), a: 1 - c * 0.8, warm: clamp(1 - m.sky.sun.alt / 14, 0, 1) } : null,
+      moon: !plain && m.sky.moon.alt > 0 && m.alt < 6 ? { x: xOf(m.sky.moon.az), y: yOf(m.sky.moon.alt), p: m.moon, a: +(1 - c * 0.85).toFixed(2) } : null,
+      stars: plain ? 0 : clamp((-m.alt - 3) / 9, 0, 1) * (1 - c * 0.92),
+      cloudRGB: light ? (c > 0.6 ? [226, 231, 238] : [255, 255, 255]) : [142, 152, 180], cloudA: c > 0.02 ? 0.16 + 0.42 * c : 0,
+      veilRGB: light ? (S.wx === 'storm' ? [82, 90, 108] : S.wx === 'rain' ? [104, 114, 130] : [176, 184, 194]) : [16, 20, 32], veilA: c > 0.6 ? (c - 0.6) * 1.1 : 0, rainRGB: light ? '244,248,253' : '186,202,230' };
   }
+  /** Ce que le canevas du ciel doit peindre à cet instant (voir sky.js). */
+  function skyDraw(k, m) {
+    return { grad: k.stops.map(function (s) { return [s[0], rgb(s[1])]; }), glow: k.glow, sunX: k.sunX, stars: k.stars, rot: (+m.now / 86164090.5) * 2 * Math.PI % (2 * Math.PI), sun: k.sun, moon: k.moon,
+      cloud: k.c, rain: k.wet ? (k.storm ? 1.5 : 1) : 0, storm: k.storm, cloudRGB: k.cloudRGB.join(','), veilRGB: k.veilRGB.join(','), rainRGB: k.rainRGB };
+  }
+
+  /* ---------- le garde-fou de lisibilité ----------
+   * Le fond change toute la journée ; le texte, lui, doit rester lisible à chaque instant. Pour chaque zone de l'écran,
+   * on calcule la couleur réelle du ciel derrière elle (dégradé, lueur d'horizon, nuages, halo du soleil, voile de pluie),
+   * puis on choisit le ton du verre (clair ou fumé) et on l'épaissit jusqu'à tenir les contrastes exigés (WCAG 2.2). */
+  var INK = { light: [15, 27, 45], dark: [244, 246, 251] }, MUTE = { light: [43, 61, 85], dark: [190, 200, 219] }, TINT = { light: [255, 255, 255], dark: [9, 14, 32] }, BASE = { light: 0.42, dark: 0.2 }, NEED = { ink: 7, mute: 4.5, acc: 3 },
+      ACCT = { hatadhar: { light: [11, 99, 218], dark: [92, 203, 245] }, awqat: { light: [6, 122, 90], dark: [47, 191, 155] }, kairos: { light: [208, 58, 12], dark: [255, 138, 91] } }, GOLD = [246, 207, 126];
+  function lin(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+  function lum(c) { return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]); }
+  function ratio(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+  function over(bg, fg, al) { return bg.map(function (v, i) { return v + (fg[i] - v) * al; }); }
+  function bgAt(k, y) {
+    var st = k.stops, i, c = st[st.length - 1][1];
+    for (i = 1; i < st.length; i++) if (y <= st[i][0]) { c = over(st[i - 1][1], st[i][1], (y - st[i - 1][0]) / (st[i][0] - st[i - 1][0])); break; }
+    if (k.glow > 0.01) { var d = Math.sqrt(Math.pow((0.5 - k.sunX) * 0.48, 2) + Math.pow(1.02 - y, 2)) / 0.8, gl = d < 0.45 ? 0.6 - 0.36 * d / 0.45 : d < 1 ? 0.24 * (1 - (d - 0.45) / 0.55) : 0; c = over(c, [255, 160, 116], gl * k.glow); }
+    if (k.veilA) c = over(c, k.veilRGB, k.veilA);
+    if (k.wet) c = over(c, k.veilRGB, clamp((y - 0.55) / 0.45, 0, 1) * 0.3);
+    return c;
+  }
+  /** Les fonds possibles derrière une zone : le ciel nu, le même sous un nuage, le même dans le halo du soleil. */
+  function variants(k, ys) { var o = []; ys.forEach(function (y) { var b = bgAt(k, y); o.push(b); if (k.cloudA) o.push(over(b, k.cloudRGB, Math.min(0.85, k.cloudA * 1.3)));
+    if (k.sun) { var d = Math.abs(y - k.sun.y) / 0.36, f = d < 0.1 ? 0.7 - 3.4 * d : d < 0.38 ? 0.36 - 0.25 * (d - 0.1) / 0.28 : d < 1 ? 0.11 * (1 - (d - 0.38) / 0.62) : 0; if (f * k.sun.a > 0.02) o.push(over(b, [255, 226, 156], f * k.sun.a)); } }); return o; }
+  function solve(v, tone, acct, base, need) { need = need || [NEED.ink, NEED.mute, NEED.acc]; var a = base == null ? BASE[tone] : base, r, test = function (al) { var x = [99, 99, 99]; v.forEach(function (bg) { var gl = over(bg, TINT[tone], al); x[0] = Math.min(x[0], ratio(INK[tone], gl)); x[1] = Math.min(x[1], ratio(MUTE[tone], gl)); x[2] = Math.min(x[2], ratio(acct, gl)); }); return x; };
+    for (; a < 0.92; a += 0.02) { r = test(a); if (r[0] >= need[0] && r[1] >= need[1] && r[2] >= need[2]) break; } a = Math.min(a, 0.92); return { tone: tone, a: a, r: test(a) }; }
+  function guard(k, m) {
+    var shab = isShabbat(m), acct = function (t) { return shab ? (t === 'light' ? INK.light : GOLD) : ACCT[S.p][t]; }, pref = k.plain ? 'dark' : lum(bgAt(k, 0.5)) > 0.22 ? 'light' : 'dark', other = pref === 'light' ? 'dark' : 'light';
+    function zone(ys, base, need) { var v = variants(k, ys), z = solve(v, pref, acct(pref), base, need), y; if (z.a > 0.86) { y = solve(v, other, acct(other), base, need); if (y.a < z.a) z = y; }
+      var sk = [[255, 255, 255], [0, 0, 0]].map(function (c) { return Math.min.apply(null, v.map(function (x) { return ratio(c, x); })); }); z.sink = sk[0] >= sk[1] ? '#fff' : '#000'; z.rs = Math.max(sk[0], sk[1]); return z; }
+    var z = { top: zone([0.04, 0.11]), dial: zone([0.2, 0.4, 0.6]), rail: zone([0.69, 0.76]), bar: zone([0.9, 0.96]), pane: zone([0.06, 0.3, 0.6, 0.93]), watch: zone([0.12, 0.2, 0.5, 0.8]), sb: zone([0.03, 0.06], 0, [4.5, 0, 0]) }, min = { ink: 99, mute: 99, acc: 99, sky: 99 };
+    Object.keys(z).forEach(function (n) { if (n === 'sb') return; min.ink = Math.min(min.ink, z[n].r[0]); min.mute = Math.min(min.mute, z[n].r[1]); min.acc = Math.min(min.acc, z[n].r[2]); }); min.sky = z.sb.r[0];
+    return { pref: pref, z: z, min: min };
+  }
+  function setZone(e, z, shab) { if (!e) return; e.dataset.tone = z.tone; e.style.setProperty('--s', 'rgba(' + TINT[z.tone].join(',') + ',' + z.a.toFixed(2) + ')'); e.style.setProperty('--sink', z.sink);
+    e.style.setProperty('--acct', shab ? (z.tone === 'light' ? 'var(--ink)' : rgb(GOLD)) : rgb(ACCT[S.p][z.tone])); }
+  function clearZone(e) { if (!e) return; delete e.dataset.tone; ['--s', '--sink', '--acct'].forEach(function (p) { e.style.removeProperty(p); }); }
+  /** Le même contrôle sur toute une journée, par tous les temps : c'est la jauge que le propriétaire a demandée. */
+  function audit() { var keep = S.wx, w = T.wall(S.now, tz()), out = { n: 0, ink: 99, mute: 99, acc: 99, sky: 99, bad: 0 };
+    [0, 0.45, 0.9, 'rain', 'storm'].forEach(function (wx) { S.wx = wx; for (var mn = 0; mn < 1440; mn += 5) { var m = T.compute(S.p, T.fromWall(w.y, w.m, w.d, mn / 60, tz()), cfg()), g = guard(skyModel(m), m).min; out.n++;
+      ['ink', 'mute', 'acc', 'sky'].forEach(function (q) { out[q] = Math.min(out[q], g[q]); }); if (g.ink < NEED.ink || g.mute < NEED.mute || g.acc < NEED.acc || g.sky < NEED.mute) out.bad++; } });
+    S.wx = keep; return out; }
   function moonSVG(m) { return '<svg viewBox="0 0 24 24"><defs><radialGradient id="mgd" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#CBD3E4"/></radialGradient></defs><circle cx="12" cy="12" r="11" fill="currentColor" opacity=".12"/><path d="' + D2Sky.moonPath(12, 12, 11, m.moon) + '" fill="url(#mgd)"/></svg>'; }
 
   /* ---------- le cadran ----------
    * Rond sur le téléphone. Sur la montre, une superellipse qui épouse le boîtier : tout l'écran sert,
    * et l'ANGLE reste le paramètre, comme pour la face carrée du brevet. */
+  var HOURS = { he: ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב'], ar: ['١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '١٠', '١١', '١٢'] };
   var GEO = {
     full: { w: 320, h: 320, cx: 160, cy: 160, a: 146, b: 146, n: 2, rw: 10, ia: 118, ib: 118, iw: 16, step: 1.5 },
     watch: { w: 212, h: 258, cx: 106, cy: 129, a: 96, b: 119, n: 4.4, rw: 9, ia: 80, ib: 103, iw: 13, step: 3 },
-    mini: { w: 320, h: 320, cx: 160, cy: 160, a: 138, b: 138, n: 2, rw: 28, ia: 86, ib: 86, iw: 34, step: 6 }
+    mini: { w: 320, h: 320, cx: 160, cy: 160, a: 138, b: 138, n: 2, rw: 28, ia: 86, ib: 86, iw: 34, step: 6 },
+    thin: { w: 320, h: 320, cx: 160, cy: 160, a: 148, b: 148, n: 2, rw: 5, ia: 134, ib: 134, iw: 7, step: 1.5 }
   };
   function pt(g, deg, d) { var t = deg * Math.PI / 180, s = Math.sin(t), c = -Math.cos(t), a = g.a + d, b = g.b + d, r = Math.pow(Math.pow(Math.abs(s) / a, g.n) + Math.pow(Math.abs(c) / b, g.n), -1 / g.n); return [g.cx + r * s, g.cy + r * c]; }
   function line(g, a0, a1, d) { var o = [], x; if (a1 < a0) a1 = a0; for (x = a0; x < a1; x += g.step) o.push(pt(g, x, d)); o.push(pt(g, a1, d));
@@ -106,41 +154,44 @@
   var ringCache = {};
   function ring(m) { var k = m.product.id + m.city.tz + m.city.lat + (+m.cycle.start); if (!ringCache[k]) { var a = [], len = m.cycle.end - m.cycle.start, i; for (i = 0; i < 120; i++) a.push(T.skyCSS(T.sunAlt(new Date(+m.cycle.start + (i + 0.5) / 120 * len), m.city.lat, m.city.lng))); ringCache[k] = a; } return ringCache[k]; }
   function dialSVG(m, key, mono) {
-    var g = GEO[key], o = [], now = m.frac * 360, w0 = m.angle(m.window.start), w1 = m.angle(m.window.end), cols = ring(m), i, n = Math.floor(now / 3), di = g.ia - g.a, P = function (d, s, sw, cap) { return '<path d="' + d + '" fill="none" stroke="' + s + '" stroke-width="' + sw + '"' + (cap ? ' stroke-linecap="round" stroke-linejoin="round"' : '') + '/>'; };
+    var g = key === 'full' && S.face === 'pashut' && !mono ? GEO.thin : GEO[key], o = [], now = m.frac * 360 * (mono ? 1 : S.intro), w0 = m.angle(m.window.start), w1 = m.angle(m.window.end), cols = ring(m), i, n = Math.floor(now / 3), di = g.ia - g.a, P = function (d, s, sw, cap) { return '<path d="' + d + '" fill="none" stroke="' + s + '" stroke-width="' + sw + '"' + (cap ? ' stroke-linecap="round" stroke-linejoin="round"' : '') + '/>'; };
     // l'anneau : le cycle qui se consomme, coloré par la lumière réelle de chaque instant
     o.push(P(line(g, 0, 360, 0) + 'Z', 'var(--track)', g.rw));
     if (mono) o.push(P(line(g, 0, Math.max(now, 1), 0), 'var(--mute)', g.rw));
     else { o.push('<g class="ringg">'); for (i = 0; i < n; i++) o.push(P(line(g, i * 3, i * 3 + 3.5, 0), cols[i], g.rw)); if (now > n * 3) o.push(P(line(g, n * 3, now, 0), cols[Math.min(n, 119)], g.rw)); o.push('</g>'); }
-    if (key !== 'mini') m.cycle.windows.forEach(function (w, j) { if (j) o.push(seg(g, m.angle(w.start), -g.rw / 2 - 4, -g.rw / 2 - 8, 'var(--mute)', 1.6)); });
-    if (key === 'full') {
+    if (key !== 'mini' && S.face !== 'pashut') m.cycle.windows.forEach(function (w, j) { if (j) o.push(seg(g, m.angle(w.start), -g.rw / 2 - 4, -g.rw / 2 - 8, 'var(--mute)', 1.6)); });
+    if (key === 'full' && S.face === 'otiot' && !mono) {
+      // les heures du cycle, à l'intérieur du cadran : douze heures zmaniot, la lettre de l'heure en cours mise en avant
+      var cur = Math.min(12, Math.floor(m.frac * 12) + 1), hl = S.p === 'kairos' ? null : HOURS[m.product.lang];
+      for (i = 1; i <= 12; i++) { var q = pt(g, i * 30, -55), tx = hl ? hl[i - 1] : String(Math.round(T.wall(new Date(+m.cycle.start + i / 12 * (m.cycle.end - m.cycle.start)), m.city.tz).h) % 24);
+        o.push('<text class="hr' + (i === cur ? ' on' : i < cur ? ' past' : '') + '" x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central">' + tx + '</text>'); }
+    } else if (key === 'full' && S.face !== 'pashut') {
       for (i = 1; i < 12; i++) { var d = pt(g, i * 30, -49); o.push('<circle cx="' + d[0].toFixed(1) + '" cy="' + d[1].toFixed(1) + '" r="1.4" fill="var(--mute)" opacity=".6"/>'); }
-      if (S.face === 'sofer') { var lab = S.p === 'kairos' ? ['6 h', '12 h', '18 h'] : (P().lang === 'he' ? ['ג׳', 'ו׳', 'ט׳'] : ['3', '6', '9']);
-        lab.forEach(function (t, j) { var q = pt(g, (j + 1) * 90, -57); o.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="15" fill="var(--mute)" style="font-family:var(--title)">' + t + '</text>'); }); }
     }
     // l'arc intérieur : uniquement la fenêtre en cours ; sa partie colorée est le temps restant
     o.push(P(line(g, w0, w1, di), 'var(--s2)', g.iw, 1));
-    o.push(P(line(g, Math.min(now, w1 - 0.6), w1, di), mono ? 'var(--ink)' : 'var(--acc)', g.iw, 1));
+    o.push('<g class="rest">' + P(line(g, Math.min(Math.max(now, w0), w1 - 0.6), w1, di), mono ? 'var(--ink)' : 'var(--acc)', g.iw, 1) + '</g>');
     if (key !== 'mini') o.push(seg(g, w1, di - g.iw / 2 - 4, di + g.iw / 2 + 4, 'var(--ink)', 2.6));
     // l'encoche du haut : l'ancre du cycle
     o.push(seg(g, 0, -g.rw / 2 - (key === 'mini' ? 2 : 5), g.rw / 2 + (key === 'mini' ? 2 : 5), 'var(--ink)', key === 'mini' ? 9 : 3.2));
     // l'astre du moment : un soleil avec son halo, une lune avec sa phase — jamais un simple point
-    if (!mono) { var c = pt(g, now, 0), r = key === 'mini' ? 16 : g.rw * 1.05, cx = c[0].toFixed(1), cy = c[1].toFixed(1), id = key + S.p;
+    if (!mono) { var c = pt(g, now, 0), r = key === 'mini' ? 16 : Math.max(9, g.rw * 1.05), cx = c[0].toFixed(1), cy = c[1].toFixed(1), id = key + S.p;
       if (m.isNight) o.push('<defs><radialGradient id="mh' + id + '"><stop offset="0" stop-color="#DCE5FF" stop-opacity=".55"/><stop offset="1" stop-color="#DCE5FF" stop-opacity="0"/></radialGradient><radialGradient id="mb' + id + '" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#C9D1E3"/></radialGradient></defs>' +
-        '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 2.6).toFixed(1) + '" fill="url(#mh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#AEB9D6" opacity=".2"/><path d="' + D2Sky.moonPath(+cx, +cy, r, m.moon) + '" fill="url(#mb' + id + ')"/>');
+        '<circle class="halo" cx="' + cx + '" cy="' + cy + '" r="' + (r * 2.6).toFixed(1) + '" fill="url(#mh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#AEB9D6" opacity=".2"/><path d="' + D2Sky.moonPath(+cx, +cy, r, m.moon) + '" fill="url(#mb' + id + ')"/>');
       else o.push('<defs><radialGradient id="sh' + id + '"><stop offset="0" stop-color="#FFE08A" stop-opacity=".8"/><stop offset=".45" stop-color="#FFC95A" stop-opacity=".3"/><stop offset="1" stop-color="#FFC95A" stop-opacity="0"/></radialGradient><radialGradient id="sb' + id + '"><stop offset="0" stop-color="#FFFDF0"/><stop offset=".55" stop-color="#FFE585"/><stop offset="1" stop-color="#FFB53E"/></radialGradient></defs>' +
-        '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 3).toFixed(1) + '" fill="url(#sh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="url(#sb' + id + ')"/>'); }
+        '<circle class="halo" cx="' + cx + '" cy="' + cy + '" r="' + (r * 3).toFixed(1) + '" fill="url(#sh' + id + ')"/><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="url(#sb' + id + ')"/>'); }
     return '<svg class="dial" viewBox="0 0 ' + g.w + ' ' + g.h + '" role="img" aria-label="' + esc(remText(m.remaining) + ' ' + win(m.window).what) + '">' + o.join('') + '</svg>';
   }
   /* La boussole : la rose tourne avec l'appareil, le Temple (ou la Kaaba), le soleil et la lune y sont à leur place réelle. */
   function compassSVG(m) {
-    var g = GEO.full, o = [P0('<circle cx="160" cy="160" r="146" fill="none" stroke="var(--track)" stroke-width="10"/>')], i, rose = [];
+    var g = GEO.full, o = [P0('<defs><linearGradient id="cmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE9A8"/><stop offset="1" stop-color="#F2B02E"/></linearGradient></defs><circle cx="160" cy="160" r="146" fill="none" stroke="var(--track)" stroke-width="10"/>')], i, rose = [];
     function P0(x) { return x; }
     for (i = 0; i < 72; i++) rose.push(seg(g, i * 5, -18, i % 6 ? -23 : -28, 'var(--mute)', i % 18 ? 1.2 : 2.4));
     L().card.forEach(function (t, j) { var q = pt(g, j * 90, -48); rose.push('<text x="' + q[0].toFixed(1) + '" y="' + q[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="600" fill="' + (j ? 'var(--mute)' : 'var(--ink)') + '" font-family="inherit" transform="rotate(' + (j * 90) + ' ' + q[0].toFixed(1) + ' ' + q[1].toFixed(1) + ')">' + t + '</text>'); });
     function mark(az, body) { return '<g transform="rotate(' + az.toFixed(1) + ' 160 160)">' + body + '</g>'; }
     if (m.sky.sun.alt > -6) rose.push(mark(m.sky.sun.az, '<circle cx="160" cy="14" r="9" fill="#FFD76A" stroke="#F0A93B" stroke-width="1.4"/>'));
     if (m.sky.moon.alt > -6) rose.push(mark(m.sky.moon.az, '<circle cx="160" cy="14" r="8" fill="#F1F3F8" stroke="#8D97AD" stroke-width="1.2"/>'));
-    rose.push(mark(m.bearing, '<circle cx="160" cy="16" r="21" fill="var(--g)" stroke="var(--gold)" stroke-width="2"/><g transform="translate(142.5 -1.5) scale(1.46)" style="color:var(--gold)">' + (S.p === 'hatadhar' ? I.raw('temple') : '<path fill="currentColor" d="M6.5 6.5h11v12h-11zM6.5 9.6h11v1.5h-11z" fill-rule="evenodd"/>') + '</g>'));
+    rose.push(mark(m.bearing, '<circle cx="160" cy="16" r="21" fill="url(#cmg)"/><g transform="translate(142.5 -1.5) scale(1.46)" style="color:#3A2800">' + (S.p === 'hatadhar' ? I.raw('temple') : '<path fill="currentColor" d="M6.5 6.5h11v12h-11zM6.5 9.6h11v1.5h-11z" fill-rule="evenodd"/>') + '</g>'));
     o.push('<g class="rose" style="transform:rotate(' + (-S.heading).toFixed(1) + 'deg)">' + rose.join('') + '</g>');
     o.push('<path d="M160 44l-8 -16h16z" fill="var(--acc)"/>');
     return '<svg class="dial" viewBox="0 0 320 320" aria-hidden="true">' + o.join('') + '</svg>';
@@ -154,11 +205,11 @@
 
   /* ---------- téléphone ---------- */
   function tabs() { var icons = ['clock', 'list', 'cal', 'bell', 'user'], l = L();
-    return '<nav class="tb" role="tablist">' + icons.map(function (n, i) { return l.tabs[i] ? '<button role="tab" aria-selected="' + (S.screen === i) + '" data-act="tab" data-i="' + i + '">' + ic(n) + '<span>' + l.tabs[i] + '</span></button>' : ''; }).join('') + '</nav>'; }
+    return '<nav class="tb" role="tablist"><i class="blob"></i>' + icons.map(function (n, i) { return l.tabs[i] ? '<button role="tab" aria-selected="false" data-act="tab" data-i="' + i + '">' + ic(n) + '<span>' + l.tabs[i] + '</span></button>' : ''; }).join('') + '</nav>'; }
   function sw(key, on) { return '<button class="sw" role="switch" aria-checked="' + on + '" data-act="sw" data-k="' + esc(key) + '" aria-label="' + esc(key) + '"></button>'; }
   function isOn(key, def) { var k = S.p + key; return S.off[k] == null ? def : S.off[k]; }
   function scrDial() {
-    return '<div class="row between"><button class="pill" data-act="tab" data-i="4">' + ic('pin') + '<span data-t="city"></span></button><span class="meta" data-t="date"></span></div>' +
+    return '<div class="row between"><button class="pill" data-act="tab" data-i="4">' + ic('pin') + '<span data-t="city"></span></button><span class="pill ghost" data-t="date"></span></div>' +
       '<div class="dialwrap">' + (M.target ? '<button class="fbtn" data-act="flip" aria-label="' + esc(L().dir) + '" data-fbtn></button>' : '') + dialBox('full', !!M.target, S.side) +
       (M.target ? '<div class="pg" data-pg><button data-act="flipto" data-s="front" aria-label="' + esc(L().tabs[0]) + '"><i></i></button><button data-act="flipto" data-s="back" aria-label="' + esc(L().dir) + '"><i></i></button></div>' : '') + '</div>' +
       '<div class="next" data-list="next"></div>';
@@ -178,7 +229,7 @@
     return [['Lumière du matin', 'Sortir avant ' + hm(k.lumiere, z), 1, 'sunrise'], ['Dernière caféine', hm(k.cafeine, z), 1, 'cup'], ['Sieste possible', 'Pendant le creux · 20 min', 0, 'bed'], ['Écrans en veilleuse', hm(k.ecrans, z), 1, 'moon'], ['Coucher', hm(k.coucher, z), 1, 'bed']];
   }
   function choice(key, opts, cur) { return '<div class="choice">' + opts.map(function (o) { return '<button data-act="set" data-k="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(cur) === String(o[0])) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
-  var FACES = { he: ['שמיים', 'סופר', 'אבן ירושלמית', 'לילה'], ar: ['السماء', 'الخطاط', 'الحجر', 'الليل'], fr: ['Ciel vivant', 'Encre', 'Pierre', 'Nuit'] }, FACE_ID = ['sky', 'sofer', 'even', 'layla'];
+  var FACES = { he: ['שמיים', 'שעות זמניות', 'נקי', 'לילה'], ar: ['السماء', 'الساعات', 'بسيط', 'الليل'], fr: ['Ciel vivant', 'Heures', 'Épuré', 'Nuit'] }, FACE_ID = ['sky', 'otiot', 'pashut', 'layla'];
   function scrMe() {
     var c = cfg(), l = L(), lang = P().lang, h = '<div class="h1">' + l.me + '</div><p class="lbl">' + l.city + '</p>' + choice('city', P().cities.map(function (id) { return [id, T.CITIES[id][lang]]; }), c.city);
     if (S.p === 'hatadhar') h += '<p class="lbl">נוסח</p>' + choice('rite', [['edot', 'עדות המזרח'], ['sfard', 'ספרד'], ['ashkenaz', 'אשכנז']], c.rite) + '<p class="lbl">שיטה · סוף זמן קריאת שמע</p>' + choice('opinion', [['gra', 'הגר״א'], ['mga', 'מגן אברהם']], c.opinion);
@@ -211,9 +262,19 @@
     return '<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-label="' + esc(p.t) + '"><div class="row between"><div class="row"><span class="sic">' + ic(p.ic) + '</span><div><b class="st">' + (S.text ? TEXTS[S.text].t : p.t) + '</b><small class="meta">' + rite + '</small></div></div><button class="xbtn" data-act="close" aria-label="סגירה">' + ic('x') + '</button></div>' + body + '</div>' +
       (S.flash ? '<div class="flash"><div class="fl-in">' + ic('temple') + '<b>לכיוון בית המקדש</b><small>' + Math.round(M.bearing) + '° · ' + Math.round(M.distance).toLocaleString('fr-FR') + ' ' + L().km + '</small></div></div>' : '');
   }
+  /* La coque du téléphone reste en place : seul l'écran change, et la goutte de la barre du bas glisse d'un onglet à l'autre. */
+  function moveBlob(ph, anim) { var tb = $('.tb', ph), b = tb && $('.blob', tb), on = tb && $('[aria-selected=true]', tb); if (!on) return;
+    var from = { l: b.offsetLeft, w: b.offsetWidth }, to = { l: on.offsetLeft, w: on.offsetWidth }; b.style.left = to.l + 'px'; b.style.width = to.w + 'px';
+    if (anim && !still && b.animate && from.w) { var l0 = Math.min(from.l, to.l), r0 = Math.max(from.l + from.w, to.l + to.w);
+      b.animate([{ left: from.l + 'px', width: from.w + 'px', transform: 'scaleY(1)' }, { left: l0 + 'px', width: (r0 - l0) + 'px', transform: 'scaleY(.74)', offset: 0.4 }, { left: to.l + 'px', width: to.w + 'px', transform: 'scaleY(1)' }], { duration: 620, easing: 'cubic-bezier(.3,1.3,.45,1)' }); } }
   function renderPhone() {
-    var scr = [scrDial, scrLouah, scrCal, scrAlerts, scrMe][S.screen]();
-    $('#phone').innerHTML = '<div class="phone" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr">' + scr + '</div>' + tabs() + '<div data-sheet>' + sheetHTML() + '</div></div>';
+    var host = $('#phone'), ph = $('.phone', host), prev = ph ? +ph.dataset.scr : -1;
+    if (!ph || ph.dataset.pid !== S.p) { prev = -1;
+      host.innerHTML = '<div class="phone" data-pid="' + S.p + '" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<i class="pane"></i><div class="sb"><span data-t="clock"></span><i></i><span><b></b></span></div><div class="scr"></div>' + tabs() + '<div data-sheet></div><div class="splash" data-splash hidden></div></div>';
+      ph = $('.phone', host); }
+    var scr = $('.scr', ph); ph.dataset.scr = S.screen; scr.innerHTML = [scrDial, scrLouah, scrCal, scrAlerts, scrMe][S.screen](); scr.scrollTop = 0; $('[data-sheet]', ph).innerHTML = sheetHTML();
+    $$('.tb button', ph).forEach(function (b) { b.setAttribute('aria-selected', +b.dataset.i === S.screen); }); moveBlob(ph, prev >= 0 && prev !== S.screen);
+    if (prev >= 0 && prev !== S.screen && !still) { scr.style.setProperty('--dx', ((S.screen > prev ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1) * 28) + 'px'); scr.classList.remove('enter'); void scr.offsetWidth; scr.classList.add('enter'); }
   }
 
   /* ---------- montre ---------- */
@@ -223,7 +284,7 @@
     else if (S.wscreen === 1) pg = top + '<div class="wnow" data-h="wnow"></div><ul class="wl" data-list="wlist"></ul>';
     else if (S.p === 'awqat') pg = top + '<button class="wtap" data-act="tasbih"><div class="wbig" data-t="tasbih"></div><small>تسبيح · 33</small></button>';
     else pg = top + '<div data-h="wday"></div>';
-    $('#watch').innerHTML = '<div class="watch"><div class="wcase"><div class="wscr" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<div class="wpage' + (S.wscreen ? '' : ' full') + '">' + pg + '</div>' +
+    $('#watch').innerHTML = '<div class="watch"><div class="wcase"><div class="wscr" data-wscr="' + S.wscreen + '" dir="' + P().dir + '" lang="' + P().lang + '">' + skyHTML() + '<i class="pane"></i><div class="wpage' + (S.wscreen ? '' : ' full') + '">' + pg + '</div>' +
       '<div class="wdots" dir="ltr">' + [0, 1, 2].map(function (i) { return '<button data-act="wtab" data-i="' + i + '" aria-selected="' + (S.wscreen === i) + '" aria-label="' + l.wl[i] + '"><i></i></button>'; }).join('') + '</div></div></div>' +
       '<div class="wnav">' + l.wl.map(function (t, i) { return '<button data-act="wtab" data-i="' + i + '" aria-pressed="' + (S.wscreen === i) + '" lang="' + P().lang + '">' + t + '</button>'; }).join('') + '</div></div>';
   }
@@ -253,28 +314,39 @@
     return '<div class="card mooncard"><div class="row"><span class="moonbig">' + moonSVG(m) + '</span><div><h4>' + phaseName(m) + '</h4><p>' + (S.p === 'hatadhar' ? 'יום ' + d + ' לחודש · ' + lv.text : 'اليوم ' + d + ' من الشهر الهجري') + '</p></div></div></div>';
   }
   function rowIc(label) { return '<span class="ri">' + ic(I.ROW[label] || 'clock') + '</span>'; }
+  function dials(m, root) { $$('[data-dial]', root).forEach(function (e) { $('[data-svg]', e).innerHTML = dialSVG(m, e.dataset.dial, !!e.dataset.mono); e.classList.toggle('urgent', m.remaining < 10 * T.MIN); var c = $('[data-cmp]', e); if (c) c.innerHTML = compassSVG(m); }); }
   function paint() {
-    var m = M = T.compute(S.p, S.now, cfg()), l = L(), z = m.city.tz, root = $('#stage'), w = win(m.window), sk = skyState(m), shab = isShabbat(m), endT = hm(m.window.end, z);
-    root.dataset.p = S.p; root.dataset.theme = sk.theme; root.dataset.face = S.face; root.dataset.shabbat = shab ? '1' : '';
-    root.style.setProperty('--g', sk.g); root.style.setProperty('--skybg', sk.bg);
+    var m = M = T.compute(S.p, S.now, cfg()), l = L(), z = m.city.tz, root = $('#stage'), w = win(m.window), k = skyModel(m), G = guard(k, m), shab = isShabbat(m), endT = hm(m.window.end, z);
+    root.dataset.p = S.p; root.dataset.theme = G.pref; root.dataset.face = S.face; root.dataset.shabbat = shab ? '1' : '';
+    root.style.setProperty('--g', rgb(k.tri[1])); root.style.setProperty('--skybg', k.plain ? '#000' : 'linear-gradient(180deg,' + rgb(k.tri[0]) + ' 0%,' + rgb(k.tri[1]) + ' 46%,' + rgb(k.tri[2]) + ' 100%)');
     var whatFull = S.p === 'kairos' ? m.window.name : remText(m.remaining) + ' ' + w.what;
-    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT, untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
+    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT + (S.face === 'otiot' && S.p === 'hatadhar' ? ' · שעה ' + HOURS.he[Math.min(11, Math.floor(m.frac * 12))] + '׳' : ''), untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
       bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih, shabcap: shab ? l.shabbat : '',
       shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '' };
     var hv = { big: remBig(m.remaining), mooncard: moonCard(m),
       wbadge: shab ? '<span class="badge shab">' + ic('candles') + 'שבת</span>' : '',
       wnow: '<span class="cic">' + ic(w.ic) + '</span><div><b>' + remPlain(m.remaining) + '</b><small>' + esc(w.what) + '</small></div>',
       wday: S.p === 'hatadhar' ? '<div class="wttl">' + weekday(m) + ' · ' + dateText(m) + '</div>' + (shab ? '<p class="wnote">' + l.shabbatMode + '</p>' : '') + '<div class="wmoon"><span class="moonbig">' + moonSVG(m) + '</span><div><b>' + phaseName(m) + '</b><small>' + levana(m).text + '</small></div></div><ul class="wl">' + [['שקיעה', m.today.shkia], [m.today.dow === 6 ? 'צאת השבת' : 'צאת הכוכבים', m.today.tzet]].map(function (r) { return '<li>' + rowIc(r[0]) + '<span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>'
-          : '<div class="wttl">Lumière et repères</div><ul class="wl">' + [['Lumière avant', m.marks.lumiere, 'sunrise'], ['Dernière caféine', m.marks.cafeine, 'cup'], ['Coucher', m.marks.coucher, 'bed']].map(function (r) { return '<li><span class="ri">' + ic(r[2]) + '</span><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>' };
+          : S.p !== 'kairos' ? '' : '<div class="wttl">Lumière et repères</div><ul class="wl">' + [['Lumière avant', m.marks.lumiere, 'sunrise'], ['Dernière caféine', m.marks.cafeine, 'cup'], ['Coucher', m.marks.coucher, 'bed']].map(function (r) { return '<li><span class="ri">' + ic(r[2]) + '</span><span>' + r[0] + '</span><time>' + hm(r[1], z) + '</time></li>'; }).join('') + '</ul>' };
     $$('[data-t]', root).forEach(function (e) { var x = v[e.dataset.t]; if (x != null && e.textContent !== String(x)) e.textContent = x; });
     $$('[data-h]', root).forEach(function (e) { var x = hv[e.dataset.h]; if (x != null && e.innerHTML !== x) e.innerHTML = x; });
     $$('[data-ic]', root).forEach(function (e) { if (e.dataset.cur !== w.ic) { e.dataset.cur = w.ic; e.innerHTML = ic(w.ic); } });
-    $$('[data-dial]', root).forEach(function (e) { $('[data-svg]', e).innerHTML = dialSVG(m, e.dataset.dial, !!e.dataset.mono); e.classList.toggle('urgent', m.remaining < 10 * T.MIN); var c = $('[data-cmp]', e); if (c) c.innerHTML = compassSVG(m); });
+    dials(m, root);
+    var wk = S.p + m.window.id + (+m.window.start); if (root.dataset.wk !== wk) { if (root.dataset.wk && !still) $$('.center', root).forEach(function (c) { c.classList.remove('chg'); void c.offsetWidth; c.classList.add('chg'); }); root.dataset.wk = wk; }
     $$('[data-bar]', root).forEach(function (e) { e.style.width = (100 * (1 - m.windowFrac)).toFixed(1) + '%'; });
-    var sd = sk.sky ? skyDraw(m, sk) : null;
-    $$('[data-sky]', root).forEach(function (e) { e.hidden = !sk.sky; if (!sk.sky) return; if (!e._sky) e._sky = new D2Sky.Sky(e); e._sky.set(sd); });
+    var sd = k.plain ? null : skyDraw(k, m);
+    $$('[data-sky]', root).forEach(function (e) { e.hidden = !sd; if (!sd) return; if (!e._sky) e._sky = new D2Sky.Sky(e); e._sky.set(sd); });
     $$('[data-fbtn]', root).forEach(function (e) { var n = S.side === 'back' ? 'clock' : (S.p === 'hatadhar' ? 'temple' : 'compass'); if (e.dataset.cur !== n) { e.dataset.cur = n; e.innerHTML = ic(n); } });
     $$('[data-pg]', root).forEach(function (e) { e.dataset.side = S.side; });
+    // le garde-fou : chaque zone reçoit le ton et l'opacité de verre qui gardent tout lisible
+    var ph = $('.phone', root), ws = $('.wscr', root), mins = { ink: 99, mute: 99, acc: 99, sky: 99 }, use = function (z) { mins.ink = Math.min(mins.ink, z.r[0]); mins.mute = Math.min(mins.mute, z.r[1]); mins.acc = Math.min(mins.acc, z.r[2]); return z; };
+    if (ph) { var sb = $('.sb', ph), scrE = $('.scr', ph), tbE = $('.tb', ph);
+      if (S.screen === 0) { clearZone(scrE); setZone(sb, G.z.sb, shab); mins.sky = G.z.sb.r[0]; setZone($('.scr > .row', ph), use(G.z.top), shab); setZone($('.dialwrap', ph), use(G.z.dial), shab); setZone($('.next', ph), use(G.z.rail), shab); setZone(tbE, use(G.z.bar), shab); }
+      else { var pz = use(G.z.pane), on = { tone: pz.tone, a: pz.tone === 'light' ? 0.5 : 0.3, sink: pz.sink }; ph.style.setProperty('--pane', 'rgba(' + TINT[pz.tone].join(',') + ',' + Math.max(pz.a, 0.62).toFixed(2) + ')'); [sb, scrE, tbE].forEach(function (e) { setZone(e, on, shab); }); } }
+    if (ws) { if (S.wscreen === 0) setZone(ws, use(G.z.watch), shab);
+      else { var wz = use(G.z.pane); ws.style.setProperty('--pane', 'rgba(' + TINT[wz.tone].join(',') + ',' + Math.max(wz.a, 0.62).toFixed(2) + ')'); setZone(ws, { tone: wz.tone, a: wz.tone === 'light' ? 0.5 : 0.3, sink: wz.sink }, shab); } }
+    var gEl = $('#gauge'); if (gEl) { var f1 = function (x) { return x.toFixed(1).replace('.', ','); }, okk = mins.ink >= NEED.ink && mins.mute >= NEED.mute && mins.acc >= NEED.acc && mins.sky >= NEED.mute;
+      gEl.innerHTML = '<i class="' + (okk ? 'ok' : 'ko') + '"></i>Lisibilité mesurée à cet instant : texte <b>' + f1(mins.ink) + '</b> · texte secondaire <b>' + f1(mins.mute) + '</b> · icônes <b>' + f1(mins.acc) + '</b>' + (mins.sky < 99 ? ' · heure du haut <b>' + f1(mins.sky) + '</b>' : '') + ' <span>(minimums exigés : 7 · 4,5 · 3 · 4,5)</span>'; }
     var dayKey = S.p + JSON.stringify(cfg()) + T.wall(m.now, z).d;
     $$('[data-list]', root).forEach(function (e) {
       var k = e.dataset.list, h = '';
@@ -296,6 +368,20 @@
   }
   function render() { M = T.compute(S.p, S.now, cfg()); renderPhone(); renderWatch(); renderSurfaces(); paint();
     $$('[data-prod]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.prod === S.p); }); $$('[data-for]').forEach(function (e) { e.hidden = e.dataset.for.split(' ').indexOf(S.p) < 0; }); }
+  /* L'ouverture : le sceau, une aiguille qui fait un tour complet, puis le cadran se remonte jusqu'à l'instant présent. */
+  var spT = 0, SPL = { hatadhar: ['', 'מחברים זמן לשורשים'], awqat: ['الأوقات', 'وقتك على مدار الشمس'], kairos: ['Kairos', 'Le bon moment, pas l’heure'] };
+  function wind() { var t0 = performance.now(); (function f(t) { var x = clamp((t - t0) / 1400, 0, 1); S.intro = 1 - Math.pow(1 - x, 3); if (M) dials(M, $('#stage')); if (x < 1) requestAnimationFrame(f); })(t0); }
+  function splash() {
+    var ph = $('#phone .phone'), el = ph && $('[data-splash]', ph); if (!el || still) return;
+    var he = S.p === 'hatadhar', t = SPL[S.p];
+    el.innerHTML = '<div class="sp-mark' + (he ? ' logo' : '') + '"><svg class="sp-ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" pathLength="100"/></svg><svg class="sp-hand" viewBox="0 0 100 100" aria-hidden="true"><line x1="50" y1="50" x2="50" y2="6"/></svg>' +
+      (he ? '<img src="logo-hatadhar.png" alt="התדהר" width="150" height="185">' : '<span class="sp-dot"></span>') + '</div>' + (t[0] ? '<div class="sp-name">' + t[0] + '</div>' : '') + '<div class="sp-sub">' + t[1] + '</div><div class="sp-pat" dir="ltr">WO 2010/013230</div>';
+    el.className = 'splash'; el.hidden = false; ph.classList.add('splashing'); clearTimeout(spT); S.intro = 0; dials(M, $('#stage'));
+    spT = setTimeout(function () { el.classList.add('out'); ph.classList.remove('splashing'); ph.classList.add('arriving'); wind(); spT = setTimeout(function () { el.hidden = true; ph.classList.remove('arriving'); }, 1500); }, 2050);
+  }
+  function showAudit() { var g = $('#gaugeAll'); if (!g) return; var r = audit(), f = function (x) { return x.toFixed(1).replace('.', ','); };
+    g.innerHTML = '<b>' + r.n.toLocaleString('fr-FR') + ' instants testés</b> (toute la journée, toutes les 5 minutes, par temps dégagé, voilé, couvert, de pluie et d’orage). Plus faible contraste mesuré : texte ' + f(r.ink) + ' · texte secondaire ' + f(r.mute) + ' · icônes ' + f(r.acc) + ' · heure en haut de l’écran ' + f(r.sky) + '. ' +
+      (r.bad ? '<b class="ko">' + r.bad + ' instants sous le seuil.</b>' : '<b class="ok">Aucun instant sous le seuil.</b>'); }
   function sheet() { $('[data-sheet]').innerHTML = sheetHTML(); var e = $('[data-text]'); if (!e || tcache[e.dataset.text]) return; var id = e.dataset.text, put = function (h) { var x = $('[data-text="' + id + '"]'); if (x) x.innerHTML = h; };
     loadText(id).then(function () { put(textHTML(id)); }).catch(function () { put('<span class="meta">לא ניתן לטעון את הטקסט כרגע.</span>'); }); }
 
@@ -315,10 +401,12 @@
   document.addEventListener('click', function (ev) {
     if (swiped) { swiped = false; return; }
     var b = ev.target.closest('[data-act],[data-prod],[data-go],[data-wx],[data-face]'); if (!b) return; var a = b.dataset.act;
-    if (b.dataset.prod) { S.p = b.dataset.prod; S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; S.sheet = null; S.heading = 0; return render(); }
-    if (b.dataset.wx != null) { S.wx = b.dataset.wx === 'rain' ? 'rain' : +b.dataset.wx; return paint(); }
+    if (b.dataset.prod) { S.p = b.dataset.prod; S.screen = 0; S.wscreen = 0; S.side = S.wside = 'front'; S.sheet = null; S.heading = 0; render(); return splash(); }
+    if (b.dataset.wx != null) { S.wx = isNaN(+b.dataset.wx) ? b.dataset.wx : +b.dataset.wx; return paint(); }
     if (b.dataset.face) { S.face = b.dataset.face; return paint(); }
     if (b.dataset.go === 'play') return S.playing ? stop() : play();
+    if (b.dataset.go === 'splash') return splash();
+    if (b.dataset.go === 'audit') return showAudit();
     if (b.dataset.go) return go(b.dataset.go);
     if (a === 'tab') { S.screen = +b.dataset.i; S.side = 'front'; S.heading = 0; S.sheet = null; renderPhone(); return paint(); }
     if (a === 'wtab') { S.wscreen = +b.dataset.i; S.wside = 'front'; renderWatch(); return paint(); }
@@ -345,6 +433,7 @@
   document.addEventListener('pointerup', function (e) { if (sx == null) return; var d = e.clientX - sx; sx = null; if (Math.abs(d) < 30) return; swiped = true; setTimeout(function () { swiped = false; }, 60);
     if (zone === 'd') return flip(false); var dir = (d < 0 ? 1 : -1) * (P().dir === 'rtl' ? -1 : 1); S.wscreen = clamp(S.wscreen + dir, 0, 2); S.wside = 'front'; renderWatch(); paint(); });
   if (/[?&]embed=1/.test(location.search)) document.body.classList.add('embed');
-  render();
-  window.D2 = { S: S, render: render, paint: paint, go: go, T: T };
+  window.addEventListener('resize', function () { var ph = $('#phone .phone'); if (ph) moveBlob(ph, false); });
+  render(); splash();
+  window.D2 = { S: S, render: render, paint: paint, go: go, T: T, audit: audit, splash: splash };
 })();

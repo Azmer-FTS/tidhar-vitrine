@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@500;600&family=IBM+Plex+Sans+Hebrew:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="d2.css">
+<link rel="stylesheet" href="d2.css?v=4">
 <style>
   .cmpgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:18px 0 60px}
   .col h2{font-size:15px;font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
@@ -53,7 +53,7 @@
   <button class="chip" data-c="shab" data-only="hatadhar">Chabbat</button>
   <button class="chip" data-c="motz" data-only="hatadhar">Sortie de Chabbat</button>
   <div class="seg" role="group" aria-label="Météo" data-only="hatadhar awqat">
-    <button data-cw="0" aria-pressed="true">Dégagé</button><button data-cw="0.45">Voilé</button><button data-cw="0.9">Couvert</button><button data-cw="rain">Pluie</button>
+    <button data-cw="0" aria-pressed="true">Dégagé</button><button data-cw="0.45">Voilé</button><button data-cw="0.9">Couvert</button><button data-cw="rain">Pluie</button><button data-cw="storm">Orage</button>
   </div>
   <div class="seg which" role="group" aria-label="Version affichée">
     <button data-show="old">Ancienne</button><button data-show="new" aria-pressed="true">Nouvelle</button>
@@ -67,7 +67,7 @@
   </div>
 </div>
 
-<script src="engine.js"></script>
+<script src="engine.js?v=4"></script>
 <script>
 (function () {
   'use strict';
@@ -93,7 +93,7 @@
     var w = T.wall(st.now, tz()), od = d.getElementById('out-day'), mm = od && od.textContent.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (mm) { var diff = Math.round((Date.UTC(w.y, w.m, w.d) - Date.UTC(+mm[1], mm[2] - 1, +mm[3])) / 864e5), b = d.getElementById(diff > 0 ? 'dnext' : 'dprev'), n = Math.min(Math.abs(diff), 370); while (b && n--) b.click(); }
     var s = d.getElementById('tslider'); s.value = w.h * 60 + w.min; s.dispatchEvent(new f1.contentWindow.Event('input', { bubbles: true }));
-    var wx = st.wx === 'rain' ? 0.9 : +st.wx; [].forEach.call(d.querySelectorAll('.wxb'), function (x) { if (+x.dataset.c === wx && x.getAttribute('aria-pressed') !== 'true') x.click(); });
+    var wx = isNaN(+st.wx) ? 0.9 : +st.wx; [].forEach.call(d.querySelectorAll('.wxb'), function (x) { if (+x.dataset.c === wx && x.getAttribute('aria-pressed') !== 'true') x.click(); });
   }
   function ui() {
     var w = T.wall(st.now, tz()), z = tz();
@@ -130,7 +130,7 @@
   document.addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-cp],[data-c],[data-cw],[data-show]'); if (!b) return; var c = b.dataset.c, d = D();
     if (b.dataset.cp) { stop(); st.p = b.dataset.cp; loadV1(); ui(); return pushD2(true); }
-    if (b.dataset.cw != null) { st.wx = b.dataset.cw === 'rain' ? 'rain' : +b.dataset.cw; return push(); }
+    if (b.dataset.cw != null) { st.wx = isNaN(+b.dataset.cw) ? b.dataset.cw : +b.dataset.cw; return push(); }
     if (b.dataset.show) { $('#grid').dataset.view = b.dataset.show; return $$('[data-show]').forEach(function (x) { if (x.tagName === 'BUTTON') x.setAttribute('aria-pressed', x === b); }); }
     if (c === 'play') { if (st.playing) return stop(); st.playing = true; b.setAttribute('aria-pressed', true); b.textContent = 'Pause'; timer = setInterval(function () { st.now = new Date(+st.now + 2 * T.MIN); push(); }, 110); return; }
     stop();

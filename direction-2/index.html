@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500&family=Fraunces:opsz,wght@9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=Noto+Naskh+Arabic:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="d2.css">
+<link rel="stylesheet" href="d2.css?v=4">
 </head>
 <body>
 <header class="top"><div class="wrap">
@@ -38,17 +38,20 @@
   <button class="chip" data-go="now">Maintenant</button>
   <button class="chip" data-go="play" aria-pressed="false">Lecture</button>
   <button class="chip" data-go="end">Fin de fenêtre</button>
+  <button class="chip" data-go="splash">Rejouer l’ouverture</button>
   <button class="chip" data-go="erev" data-for="hatadhar">Veille de Chabbat</button>
   <button class="chip" data-go="shab" data-for="hatadhar">Chabbat</button>
   <button class="chip" data-go="motz" data-for="hatadhar">Sortie de Chabbat</button>
   <button class="chip" data-go="erev" data-for="awqat">Vendredi</button>
   <div class="seg" role="group" aria-label="Météo">
-    <button data-wx="0">Dégagé</button><button data-wx="0.45">Voilé</button><button data-wx="0.9">Couvert</button><button data-wx="rain">Pluie</button>
+    <button data-wx="0">Dégagé</button><button data-wx="0.45">Voilé</button><button data-wx="0.9">Couvert</button><button data-wx="rain">Pluie</button><button data-wx="storm">Orage</button>
   </div>
 </div></div>
 
 <section class="wrap">
   <p class="cap capline" style="margin-top:18px"><b id="cityOut"></b>. Il n’y a pas de thème clair ou sombre à choisir : l’écran suit la lumière du ciel à cette heure, et la météo. La ville, le rite et l’opinion se changent dans le dernier onglet du téléphone.</p>
+  <p class="cap capline gauge" id="gauge"></p>
+  <p class="cap capline gauge"><button class="chip" data-go="audit">Tester la lisibilité sur toute la journée</button><span id="gaugeAll" style="color:var(--page-mute)"></span></p>
   <div class="stage p" id="stage" data-p="hatadhar" data-theme="dark">
     <div>
       <div id="phone"></div>
@@ -61,8 +64,8 @@
           <p class="cap" style="margin-top:0">Le cadran épouse le boîtier : <b>tout l’écran sert</b>. Au centre, l’icône, le temps qui reste et ce pour quoi il reste. Touchez le cadran : il se retourne en boussole vers le Temple, avec le soleil et la lune à leur vraie place.</p>
           <p class="cap">Sur une vraie montre, <b>la couronne fait défiler la journée</b>.</p>
           <p class="h-small" style="margin-top:18px">Modèle de cadran</p>
-          <div class="faces"><button class="chip" data-face="sky">Ciel vivant</button><button class="chip" data-face="sofer">Sofer</button><button class="chip" data-face="even">Pierre de Jérusalem</button><button class="chip" data-face="layla">Nuit</button></div>
-          <p class="cap">La matière change, jamais la lecture du brevet.</p>
+          <div class="faces"><button class="chip" data-face="sky">Ciel vivant</button><button class="chip" data-face="otiot">Heures en lettres</button><button class="chip" data-face="pashut">Épuré</button><button class="chip" data-face="layla">Nuit</button></div>
+          <p class="cap">« Heures en lettres » reprend les lettres hébraïques de votre première maquette : les douze heures du cycle, à l’intérieur du cadran. La lecture du brevet ne change jamais.</p>
         </div>
       </div>
       <div class="surfaces" id="surfaces"></div>
@@ -74,16 +77,16 @@
   <h2>Ce qui a changé après vos retours</h2>
   <div class="two">
     <ul>
-      <li><b>Le ciel est revenu, partout.</b> Étoiles la nuit, soleil et lune à leur vraie place, sur le téléphone comme sur la montre.</li>
-      <li><b>Plus de thème à choisir.</b> L’écran est clair le jour et sombre la nuit, et il suit la météo : voilé, couvert, pluie. Essayez les quatre boutons en haut.</li>
-      <li><b>Le sens est dans le cadran.</b> « 26 min <i>pour Min’ha</i> », « <i>avant l’allumage des bougies</i> », avec une icône. Sur la montre aussi : on sait toujours de quoi il reste du temps.</li>
-      <li><b>Des icônes à chaque moment</b> : dans le cadran, la liste du jour, la suite, la montre, les alertes.</li>
+      <li><b>Toujours lisible, quelle que soit l’heure.</b> Le fond change toute la journée ; un garde-fou mesure le ciel derrière chaque zone de l’écran et épaissit le verre, ou passe du clair au fumé, pour que le texte tienne le contraste. La mesure s’affiche au-dessus du téléphone, et un bouton la refait sur toute la journée.</li>
+      <li><b>Des couleurs vives.</b> Plus de bleu éteint le jour, plus de marron la veille de Chabbat : un bleu franc, et l’or de la flamme.</li>
+      <li><b>Rien n’est rogné.</b> Le halo du soleil et de la lune déborde du cadran, les ombres des vignettes ne sont plus coupées.</li>
+      <li><b>L’ouverture est revenue.</b> Le sceau, l’aiguille qui fait un tour, puis le cadran qui se remonte jusqu’à maintenant. Bouton « Rejouer l’ouverture ».</li>
     </ul>
     <ul>
-      <li><b>Chabbat se voit.</b> Une pastille « שבת שלום », l’accent qui passe à la couleur de la flamme, et la montre qui dit qu’elle est en mode Chabbat.</li>
-      <li><b>La prière du moment, en un geste.</b> Sous le cadran, un bouton ouvre Min’ha, Arvit, l’allumage des bougies ou la bénédiction de la lune. À la Amida, la direction du Temple s’affiche deux secondes.</li>
-      <li><b>La lune</b> : sa phase réelle, et quand dire la bénédiction de la lune selon le rite choisi.</li>
-      <li><b>La boussole</b> montre le Temple avec une vraie icône, le soleil et la lune, et elle tourne pour s’aligner.</li>
+      <li><b>Ça vit.</b> La barre du bas est une goutte qui s’étire d’un onglet à l’autre, les écrans glissent, le centre du cadran s’anime à chaque nouvelle fenêtre, un reflet fait le tour du verre.</li>
+      <li><b>Le ciel.</b> Voilé garde son bleu, les nuages traversent l’écran de gauche à droite, et il y a un orage avec des éclairs. Tout reste derrière le cadran.</li>
+      <li><b>Le soleil est à sa vraie hauteur.</b> L’écran est une fenêtre : l’horizon passe sous le cadran, le zénith est en haut. En hiver le soleil est bas, il passe donc derrière le verre ; en été il passe au-dessus.</li>
+      <li><b>Un cadran à lettres hébraïques</b>, et un cadran épuré : deux modèles qui changent la forme, pas seulement la couleur.</li>
     </ul>
   </div>
   <p>Pour juger sur pièces : la page <a href="comparer.html" style="color:#fff">Comparer</a> met l’ancienne et la nouvelle côte à côte, pilotées par les mêmes commandes.</p>
@@ -234,9 +237,9 @@
 </section>
 </main>
 
-<script src="engine.js"></script>
-<script src="icons.js"></script>
-<script src="sky.js"></script>
-<script src="app.js"></script>
+<script src="engine.js?v=4"></script>
+<script src="icons.js?v=4"></script>
+<script src="sky.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

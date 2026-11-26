@@ -6,7 +6,7 @@
   'use strict';
   function rng(seed) { return function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; }
   var STARS = (function () { var r = rng(7), a = [], i; for (i = 0; i < 620; i++) { var m = Math.pow(r(), 2.6); a.push({ d: Math.sqrt(r()) * 1.5, a: r() * 6.2832, s: 0.7 + m * 2.3, b: 0.45 + 0.55 * r(), tw: r() * 6.28, sp: 0.5 + r() * 1.9, c: r() }); } return a; })();
-  var PUFFS = (function () { var r = rng(21), a = [], i, j; for (i = 0; i < 18; i++) { var p = { x: r() * 1.4, y: 0.02 + r() * 0.66, w: 0.3 + r() * 0.45, sp: 0.004 + r() * 0.009, b: [] }; for (j = 0; j < 8; j++) p.b.push([r() - 0.5, (r() - 0.5) * 0.34, 0.22 + r() * 0.4]); a.push(p); } return a; })();
+  var PUFFS = (function () { var r = rng(21), a = [], i, j; for (i = 0; i < 30; i++) { var p = { x: r() * 2.6, y: 0.02 + r() * 0.66, w: 0.3 + r() * 0.45, sp: 0.004 + r() * 0.009, b: [] }; for (j = 0; j < 8; j++) p.b.push([r() - 0.5, (r() - 0.5) * 0.34, 0.22 + r() * 0.4]); a.push(p); } return a; })();
   var DROPS = (function () { var r = rng(99), a = [], i; for (i = 0; i < 190; i++) a.push({ x: r(), y: r(), l: 0.016 + r() * 0.03, v: 0.85 + r() * 1.0, a: 0.10 + r() * 0.30, w: r() < 0.22 ? 1.5 : 0.8 }); return a; })();
   var MARIA = [[-0.28, -0.22, 0.34, 0.26], [0.2, 0.12, 0.3, 0.2], [-0.08, 0.42, 0.2, 0.14], [0.34, -0.4, 0.15, 0.12], [-0.42, 0.14, 0.14, 0.18]];
 
@@ -54,19 +54,33 @@
       var mp = new Path2D(moonPath(mx, my, mr, st.moon.p)), mg = g.createRadialGradient(mx - 4, my - 5, 1, mx, my, mr); mg.addColorStop(0, 'rgba(255,255,255,' + ma + ')'); mg.addColorStop(0.7, 'rgba(232,236,246,' + ma + ')'); mg.addColorStop(1, 'rgba(204,212,230,' + ma + ')');
       g.save(); g.shadowColor = 'rgba(220,230,255,.55)'; g.shadowBlur = 12; g.fillStyle = mg; g.fill(mp); g.shadowBlur = 0; g.clip(mp); g.fillStyle = 'rgba(118,130,164,' + (0.26 * ma).toFixed(3) + ')';
       MARIA.forEach(function (q) { g.beginPath(); g.ellipse(mx + q[0] * mr, my + q[1] * mr, q[2] * mr, q[3] * mr, 0.4, 0, 6.2832); g.fill(); }); g.restore(); }
-    // 4. les nuages
+    // l'orage : de temps en temps un éclair, dessiné AVANT les nuages pour qu'ils le voilent
+    var fl = 0;
+    if (st.storm && !this.still) { if (!this.nf) this.nf = t + 1.5 + Math.random() * 2.5;
+      if (t > this.nf) { this.f0 = t; this.nf = t + 4 + Math.random() * 7; var bx0 = 0.15 + Math.random() * 0.7, by0 = 0, pts = [[bx0, 0]], br = null, n2 = 9 + (Math.random() * 5 | 0), j;
+        for (j = 0; j < n2; j++) { bx0 += (Math.random() - 0.5) * 0.11; by0 += 0.03 + Math.random() * 0.045; pts.push([bx0, by0]); if (!br && j > 2 && Math.random() < 0.3) br = [[bx0, by0], [bx0 + 0.07 * (Math.random() < 0.5 ? -1 : 1), by0 + 0.05], [bx0 + 0.11 * (Math.random() < 0.5 ? -1 : 1), by0 + 0.11]]; }
+        this.bolt = [pts, br]; }
+      var dt = t - (this.f0 == null ? -99 : this.f0); if (dt >= 0 && dt < 1.2) fl = Math.max(Math.exp(-dt * 11), dt > 0.14 ? 0.8 * Math.exp(-(dt - 0.14) * 8) : 0);
+      if (fl > 0.02 && this.bolt) { g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; g.shadowColor = 'rgba(170,200,255,.95)'; g.shadowBlur = 16; g.strokeStyle = 'rgba(244,248,255,' + Math.min(1, fl * 1.3).toFixed(3) + ')';
+        this.bolt.forEach(function (ln, q) { if (!ln) return; g.lineWidth = q ? 1 : 2; g.beginPath(); ln.forEach(function (pp, z) { g[z ? 'lineTo' : 'moveTo'](pp[0] * w, pp[1] * h); }); g.stroke(); }); g.restore(); } }
+    else this.nf = 0;
+    // 4. les nuages : ils traversent l'écran de gauche à droite ; fins et étirés quand le ciel est seulement voilé
     if (st.cloud > 0.02) {
-      var n = Math.ceil(PUFFS.length * (0.3 + 0.7 * st.cloud)), base = (0.16 + 0.42 * st.cloud);
-      for (i = 0; i < n; i++) { var p = PUFFS[i], cx = (((p.x + t * p.sp * 0.4) % 1.5) - 0.25) * w, cy = p.y * h, cw = p.w * w;
-        p.b.forEach(function (b) { var bx = cx + b[0] * cw, by = cy + b[1] * cw, br = b[2] * cw, cgd = g.createRadialGradient(bx, by, 0, bx, by, br);
-          cgd.addColorStop(0, 'rgba(' + st.cloudRGB + ',' + base.toFixed(3) + ')'); cgd.addColorStop(0.55, 'rgba(' + st.cloudRGB + ',' + (base * 0.5).toFixed(3) + ')'); cgd.addColorStop(1, 'rgba(' + st.cloudRGB + ',0)'); g.fillStyle = cgd; g.fillRect(bx - br, by - br, br * 2, br * 2); }); }
+      var thin = st.cloud < 0.6, n = Math.ceil(PUFFS.length * (0.35 + 0.65 * st.cloud)), base = (0.16 + 0.42 * st.cloud), sxk = thin ? 1.9 : 1.15, syk = thin ? 0.42 : 0.82;
+      for (i = 0; i < n; i++) { var p = PUFFS[i], cx = (((p.x + t * p.sp * 1.7) % 2.6) - 0.8) * w, cy = p.y * h * (thin ? 0.8 : 1), cw = p.w * w; if (cx - cw * 1.5 > w || cx + cw * 1.5 < 0) continue;
+        p.b.forEach(function (b) { var bx = cx + b[0] * cw * sxk, by = cy + b[1] * cw * syk, br = b[2] * cw, cgd = g.createRadialGradient(0, 0, 0, 0, 0, br);
+          cgd.addColorStop(0, 'rgba(' + st.cloudRGB + ',' + base.toFixed(3) + ')'); cgd.addColorStop(0.55, 'rgba(' + st.cloudRGB + ',' + (base * 0.5).toFixed(3) + ')'); cgd.addColorStop(1, 'rgba(' + st.cloudRGB + ',0)');
+          g.setTransform(dpr * sxk, 0, 0, dpr * syk, dpr * bx, dpr * by); g.fillStyle = cgd; g.fillRect(-br, -br, br * 2, br * 2); }); }
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (st.cloud > 0.6) { g.fillStyle = 'rgba(' + st.veilRGB + ',' + ((st.cloud - 0.6) * 1.1).toFixed(3) + ')'; g.fillRect(0, 0, w, h); }
     }
-    // 5. la pluie : des gouttes de longueurs et de vitesses différentes, et la brume du bas
-    if (st.rain) { g.lineCap = 'round';
-      for (i = 0; i < DROPS.length; i++) { var d = DROPS[i], dy = (((d.y + t * d.v * 0.95) % 1.16) - 0.08) * h, dx = ((d.x + (dy / h) * 0.05) % 1) * w, len = d.l * h;
-        g.strokeStyle = 'rgba(' + st.rainRGB + ',' + d.a.toFixed(3) + ')'; g.lineWidth = d.w; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx - len * 0.06, dy - len); g.stroke(); }
+    // 5. la pluie : des gouttes de longueurs et de vitesses différentes, et la brume du bas ; plus drue sous l'orage
+    if (st.rain) { g.lineCap = 'round'; var k = st.rain;
+      for (i = 0; i < DROPS.length; i++) { var d = DROPS[i], dy = (((d.y + t * d.v * 0.95 * k) % 1.16) - 0.08) * h, dx = ((d.x + (dy / h) * 0.05 * k) % 1) * w, len = d.l * h * (0.8 + 0.3 * k);
+        g.strokeStyle = 'rgba(' + st.rainRGB + ',' + Math.min(0.6, d.a * k).toFixed(3) + ')'; g.lineWidth = d.w; g.beginPath(); g.moveTo(dx, dy); g.lineTo(dx - len * 0.06 * k, dy - len); g.stroke(); }
       var mi = g.createLinearGradient(0, h * 0.55, 0, h); mi.addColorStop(0, 'rgba(' + st.veilRGB + ',0)'); mi.addColorStop(1, 'rgba(' + st.veilRGB + ',.30)'); g.fillStyle = mi; g.fillRect(0, 0, w, h); }
+    // 6. l'éclair illumine tout le ciel, par-dessus les nuages, puis s'éteint en deux temps
+    if (fl > 0.02) { g.fillStyle = 'rgba(214,226,255,' + (0.46 * fl).toFixed(3) + ')'; g.fillRect(0, 0, w, h); }
   };
   root.D2Sky = { Sky: Sky, moonPath: moonPath };
 })(window);

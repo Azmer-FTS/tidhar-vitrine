@@ -240,13 +240,6 @@ sup{unicode-bidi:isolate}
    ===================================================================================== */
 .p{--gold:#E9B94A;--s:rgba(255,255,255,.10);--s2:rgba(255,255,255,.16);--line:rgba(255,255,255,.12);--track:rgba(255,255,255,.14);--ink:#F4F6FB;--mute:#B9C3D6;--shadow:0 14px 34px rgba(0,0,0,.35)}
 .p[data-theme=light]{--s:rgba(255,255,255,.60);--s2:rgba(15,27,45,.11);--line:rgba(15,27,45,.12);--track:rgba(15,27,45,.13);--ink:#0F1B2D;--mute:#2B3D55;--gold:#8A5A12;--shadow:0 14px 30px rgba(30,50,80,.16)}
-.p[data-theme=light][data-p=hatadhar]{--acc:#0A5F8C;--on:#fff}
-.p[data-theme=light][data-p=awqat]{--acc:#0C6B58;--on:#fff}
-.p[data-theme=light][data-p=kairos]{--acc:#B5461A;--on:#fff}
-.p[data-shabbat="1"]{--acc:#F2C879;--on:#2A1E05}
-.p[data-shabbat="1"][data-theme=light]{--acc:#8A5A12;--on:#fff}
-.p[data-face=sofer]{--mute:#5F503E;--ink:#2A2118;--s:rgba(255,255,255,.55);--gold:#7A1E12}
-.p[data-face=even]{--mute:#5C4A30;--ink:#2E2414;--acc:#8A5A12;--on:#fff;--s:rgba(255,255,255,.42)}
 .p[data-face=layla]{--s:rgba(255,255,255,.09);--mute:#A7B1C4}
 
 .phone{background:var(--skybg,var(--g));color:var(--ink)}
@@ -395,8 +388,6 @@ body.embed .top,body.embed .intro,body.embed .controls,body.embed .prose,body.em
 body.embed .stage{padding:14px 0;gap:26px}
 body.embed .wrap{padding:0 12px}
 
-.p{--edge:rgba(0,0,0,.42)}
-.p[data-theme=light]{--edge:rgba(15,27,45,.34)}
 .sfc,.island,.aod{--edge:rgba(255,255,255,.22)}
 .watchtext .chip{color:var(--page-ink)}
 .watchtext .chip[aria-pressed=true]{color:#0C0D10}
@@ -415,12 +406,9 @@ body.embed .wrap{padding:0 12px}
   -webkit-backdrop-filter:blur(18px) saturate(1.5);backdrop-filter:blur(18px) saturate(1.5);
   border:1px solid rgba(255,255,255,.18);
   box-shadow:inset 0 1.5px 1px rgba(255,255,255,.30),inset 0 -14px 28px rgba(255,255,255,.04),0 22px 44px rgba(0,0,0,.40)}
-.p[data-theme=light] .glass{background:linear-gradient(155deg,rgba(255,255,255,.55),rgba(255,255,255,.20) 50%,rgba(255,255,255,.36));border-color:rgba(255,255,255,.55);
-  box-shadow:inset 0 1.5px 1px rgba(255,255,255,.8),inset 0 -14px 28px rgba(255,255,255,.12),0 22px 44px rgba(30,60,100,.20)}
-.p[data-face=layla] .glass,.p[data-face=sofer] .glass,.p[data-face=even] .glass{-webkit-backdrop-filter:none;backdrop-filter:none}
 .wfull .glass{inset:36px 34px;border-radius:38px;-webkit-backdrop-filter:blur(8px) saturate(1.3);backdrop-filter:blur(8px) saturate(1.3)}
 .ringg{filter:drop-shadow(0 1px 3px rgba(0,0,0,.35))}
-.p[data-theme=light] .ringg{filter:saturate(1.5) brightness(.84) drop-shadow(0 1px 2.5px rgba(10,40,80,.32))}
+[data-tone=light] .ringg{filter:saturate(1.5) brightness(.84) drop-shadow(0 1px 2.5px rgba(10,40,80,.32))}
 .center strong{font-size:58px}
 .wscr .center strong{font-size:37px}
 .aod .center strong{font-size:22px}
@@ -431,7 +419,6 @@ body.embed .wrap{padding:0 12px}
 /* le verre : un reflet en haut, un filet clair, jamais un aplat */
 .pill,.tile,.tb,.fbtn,.card,.daynav button,.wk button,.list li.cur{border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.30),var(--shadow);
   background-image:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,0) 60%)}
-.p[data-theme=light] .pill,.p[data-theme=light] .tile,.p[data-theme=light] .tb,.p[data-theme=light] .fbtn,.p[data-theme=light] .card,.p[data-theme=light] .daynav button,.p[data-theme=light] .wk button,.p[data-theme=light] .list li.cur{border-color:rgba(255,255,255,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.85),var(--shadow)}
 
 /* la rangée : place pour les ombres (elles ne sont plus rognées), prière du moment épinglée */
 .next{gap:10px;margin:6px -22px 0;padding:14px 22px 28px;scroll-snap-type:none}
@@ -459,3 +446,165 @@ body.embed .wrap{padding:0 12px}
 .backrow{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--mute);font-size:15px;margin-top:8px}
 .backrow svg{width:16px;height:16px}
 .src{margin-top:6px;font-size:12.5px}
+
+/* =====================================================================================
+   Itération 4 : garde-fou de lisibilité (ton et verre par zone), couleurs vives, rien de rogné,
+   ouverture animée, barre du bas « liquide », cadran à lettres.
+   ===================================================================================== */
+:root{--spring:cubic-bezier(.34,1.56,.64,1)}
+
+/* ---- jetons par ton. Posés sur la racine (ton général) et sur chaque zone : app.js calcule, pour chaque zone,
+        le ton et l'opacité du verre (--s) qui gardent le texte lisible sur le ciel du moment. ---- */
+.p,.p [data-tone=dark]{--ink:#F4F6FB;--mute:#BEC8DB;--s:rgba(9,14,32,.20);--s2:rgba(255,255,255,.16);--line:rgba(255,255,255,.14);--track:rgba(255,255,255,.17);
+  --shadow:0 8px 18px rgba(0,0,0,.26);--rim:rgba(255,255,255,.17);--shine:rgba(255,255,255,.24);--sink:#fff;--sheet:#0E1424;--gold:#F2C24E}
+.p[data-theme=light],.p [data-tone=light]{--ink:#0F1B2D;--mute:#2B3D55;--s:rgba(255,255,255,.42);--s2:rgba(15,27,45,.10);--line:rgba(15,27,45,.12);--track:rgba(15,27,45,.12);
+  --shadow:0 8px 18px rgba(30,50,80,.13);--rim:rgba(255,255,255,.66);--shine:rgba(255,255,255,.9);--sink:#000;--sheet:#F6F4EE;--gold:#D99100}
+.p [data-tone]{color:var(--ink)}
+
+/* ---- l'accent : vif, jamais éteint. --accf remplit les boutons, --acc trace l'arc, --acct colore icônes et grands chiffres. ---- */
+.p{--acct:var(--acc)}
+.p[data-p=hatadhar],.p[data-p=hatadhar] [data-tone=dark]{--acc:#5CCBF5;--accf:linear-gradient(160deg,#93E2FF,#3DB6EE);--on:#04202E}
+.p[data-p=hatadhar][data-theme=light],.p[data-p=hatadhar] [data-tone=light]{--acc:#0F6CEB;--accf:linear-gradient(160deg,#1470EE,#0A52CC);--on:#fff}
+.p[data-p=awqat],.p[data-p=awqat] [data-tone=dark]{--acc:#2FBF9B;--accf:linear-gradient(160deg,#66E3C0,#22B08C);--on:#03241B}
+.p[data-p=awqat][data-theme=light],.p[data-p=awqat] [data-tone=light]{--acc:#078A68;--accf:linear-gradient(160deg,#0A8565,#066A50);--on:#fff}
+.p[data-p=kairos],.p[data-p=kairos] [data-tone=dark]{--acc:#FF8A5B;--accf:linear-gradient(160deg,#FFAB84,#FF7A45);--on:#2A1206}
+.p[data-p=kairos][data-theme=light],.p[data-p=kairos] [data-tone=light]{--acc:#F2601F;--accf:linear-gradient(160deg,#FF9A5C,#FF6E2E);--on:#2A1206}
+/* Chabbat : l'or de la flamme, de nuit comme de jour. Plus de marron. */
+.p[data-shabbat="1"],.p[data-shabbat="1"] [data-tone=dark]{--acc:#F6CF7E;--accf:linear-gradient(160deg,#FFE7A6,#F2B84B);--on:#2A1C00}
+.p[data-shabbat="1"][data-theme=light],.p[data-shabbat="1"] [data-tone=light]{--acc:#FF9A1F;--accf:linear-gradient(160deg,#FFD35C,#FF9F1C);--on:#2A1700}
+.p[data-face=layla]{--mute:#A7B1C4}
+
+.center .cic,.next .ri,.list li.cur .cic,.al .ri,.wk .ri,.sfc.wd .cic{color:var(--acct)}
+.urgent .center strong{color:var(--acct)}
+.wnote,.shabcap{color:var(--ink)}
+.shabcap{letter-spacing:.02em}
+.tile.pin,.sw[aria-checked=true],.choice button[aria-pressed=true],.cta,.sic,.badge.shab,.wnow,.bar i,.steps li::before{background:var(--accf);color:var(--on)}
+.tile.pin .ri{color:inherit}
+.tile.pin.done{background:var(--s);color:var(--ink)}
+.tile.pin2{border-color:var(--acct)}
+.sw[aria-checked=true]::after{background:var(--on)}
+
+/* ---- le verre : teinte calculée (--s), reflet et filet selon le ton ---- */
+.pill,.tile,.tb,.fbtn,.card,.daynav button,.wk button,.list li.cur{border:1px solid var(--rim);box-shadow:inset 0 1px 0 var(--shine),var(--shadow);
+  transition:background-color .5s,color .5s,border-color .5s,transform .28s var(--spring)}
+.pill.ghost{font-size:13.5px;font-weight:500}
+.glass{background:linear-gradient(155deg,rgba(255,255,255,.16),rgba(255,255,255,0) 46%,rgba(255,255,255,.06)),var(--s);border:1px solid var(--rim);
+  box-shadow:inset 0 1.5px 1px var(--shine),0 18px 38px rgba(0,0,0,.22);transition:background-color .5s,border-color .5s}
+/* un reflet fait lentement le tour du verre : le cadran vit même quand rien ne change */
+.glass::after{content:"";position:absolute;inset:-1px;border-radius:inherit;background:conic-gradient(from 0deg,transparent 0 58%,rgba(255,255,255,.55) 72%,transparent 86%);
+  -webkit-mask:radial-gradient(closest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));mask:radial-gradient(closest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:sheen 18s linear infinite}
+.wfull .glass::after{display:none}
+@keyframes sheen{to{transform:rotate(1turn)}}
+.p[data-face=layla] .glass{-webkit-backdrop-filter:none;backdrop-filter:none}
+.fbtn[data-cur=temple]{background:linear-gradient(150deg,#FFEBAE,#F2B02E);color:#3A2800;border-color:rgba(255,255,255,.7)}
+.fbtn[data-cur=compass]{background:var(--accf);color:var(--on)}
+.prows small{color:var(--ink)}
+.prows small svg{color:var(--gold)}
+.sheet,.flash{background:var(--sheet);color:var(--ink)}
+
+/* ---- rien n'est rogné : le halo de l'astre déborde du cadran, les ombres des vignettes ont leur place ---- */
+.dial{overflow:visible}
+.next{margin:-12px -22px -34px;padding:30px 22px 56px}
+.tile{box-shadow:inset 0 1px 0 var(--shine),0 6px 14px rgba(0,0,0,.16)}
+.tile:active,.pill:active,.fbtn:active,.tb button:active,.cta:active,.choice button:active{transform:scale(.94)}
+
+/* ---- les écrans de liste : une vitre épaisse sur le ciel, pour que tout le texte tienne le contraste ---- */
+.pane{position:absolute;inset:0;z-index:0;opacity:0;pointer-events:none;background:var(--pane,transparent);-webkit-backdrop-filter:blur(26px) saturate(1.3);backdrop-filter:blur(26px) saturate(1.3);transition:opacity .4s,background-color .5s}
+.phone:not([data-scr="0"]) .pane,.wscr:not([data-wscr="0"]) .pane{opacity:1}
+.wscr .pane{border-radius:inherit}
+
+/* ---- la barre du bas : une goutte qui s'étire d'un onglet à l'autre ---- */
+.tb .blob{position:absolute;top:6px;bottom:6px;left:6px;width:0;border-radius:99px;background:var(--accf);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -6px 10px rgba(0,0,0,.10),0 6px 14px rgba(0,0,0,.22);pointer-events:none}
+.tb button{position:relative;z-index:1;transition:color .35s,transform .28s var(--spring)}
+.tb button[aria-selected=true]{background:none;color:var(--on)}
+.tb button[aria-selected=true] span{animation:lblin .45s var(--ease) both}
+.tb button[aria-selected=true] svg{animation:pop .5s var(--spring) both}
+@keyframes lblin{from{opacity:0;transform:translateX(calc(var(--dir,1)*-8px))}}
+@keyframes pop{from{transform:scale(.6)}}
+
+/* ---- le mouvement : chaque changement se voit ---- */
+.scr.enter{animation:scrin .46s var(--ease) both}
+@keyframes scrin{from{opacity:0;transform:translateX(var(--dx,20px));filter:blur(6px)}}
+.next>.tile{animation:tin .55s var(--ease) both}
+.next>.tile:nth-child(2){animation-delay:.05s}.next>.tile:nth-child(3){animation-delay:.1s}.next>.tile:nth-child(4){animation-delay:.15s}.next>.tile:nth-child(n+5){animation-delay:.2s}
+@keyframes tin{from{opacity:0;transform:translateY(16px) scale(.94)}}
+.center.chg>*{animation:cin .6s var(--ease) both}
+.center.chg>.cic{animation:pop .6s var(--spring) both}
+.center.chg>strong{animation-delay:.05s}.center.chg>.what{animation-delay:.1s}.center.chg>small{animation-delay:.15s}
+@keyframes cin{from{opacity:0;transform:translateY(10px);filter:blur(4px)}}
+.halo{animation:breathe 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes breathe{50%{transform:scale(1.18);opacity:.75}}
+.urgent .rest{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.wpage{animation:wpin .4s var(--ease) both}
+@keyframes wpin{from{opacity:0;transform:scale(.96)}}
+.sheet{animation:up .5s var(--spring)}
+@keyframes up{from{transform:translateY(60%);opacity:0}}
+.scrim{animation:fade .3s both}
+@keyframes fade{from{opacity:0}}
+
+/* ---- l'ouverture ---- */
+.splash{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#EAF2FB;border-radius:inherit;
+  background:radial-gradient(120% 90% at 50% 36%,rgba(18,32,58,.90) 0,rgba(7,11,20,.96) 62%,rgba(4,6,11,.98) 100%);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px)}
+.splash[hidden]{display:none}
+.splash.out{animation:spout .9s var(--ease) forwards}
+@keyframes spout{to{opacity:0;transform:scale(1.14);filter:blur(10px);visibility:hidden}}
+.sp-mark{position:relative;width:150px;height:150px;display:grid;place-items:center;animation:spin0 .9s cubic-bezier(.18,.85,.25,1) both;--c:#4DC8F0}
+.p[data-p=awqat] .sp-mark{--c:#2FBF9B}.p[data-p=kairos] .sp-mark{--c:#FF8A5B}
+.sp-mark.logo{height:185px}
+.sp-mark img{display:block;width:150px;height:185px}
+.sp-ring,.sp-hand{position:absolute;left:-16px;top:-16px;width:182px;height:182px}
+.sp-ring circle{fill:none;stroke:var(--c);stroke-width:1.6;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;transform:rotate(-90deg);transform-origin:50% 50%;animation:spdraw 1.5s cubic-bezier(.42,0,.16,1) .25s forwards}
+.sp-hand{animation:spturn 1.5s cubic-bezier(.42,0,.16,1) .25s both}
+.sp-hand line{stroke:var(--c);stroke-width:1.8;stroke-linecap:round}
+.sp-mark.logo .sp-hand line{opacity:.55}
+.sp-dot{width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:0 0 22px 6px color-mix(in srgb,var(--c) 45%,transparent)}
+.sp-name{font-family:var(--title);font-size:34px;font-weight:500;margin-top:18px;animation:spup .7s ease .7s both}
+.sp-sub{font-size:14px;color:#9FB1C8;animation:spup .7s ease .9s both}
+.sp-mark.logo~.sp-sub{margin-top:14px}
+.sp-pat{position:absolute;bottom:38px;font-size:11px;letter-spacing:.09em;color:#5E6E86;animation:spup .7s ease 1.15s both}
+@keyframes spin0{from{opacity:0;transform:scale(.72)}}
+@keyframes spdraw{to{stroke-dashoffset:0}}
+@keyframes spturn{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes spup{from{opacity:0;transform:translateY(9px)}}
+/* à la sortie de l'ouverture, l'écran arrive en douceur pendant que le cadran se remonte jusqu'à maintenant */
+.phone.arriving .center>*{animation:cin .9s var(--ease) .5s both}
+.phone.arriving .tb{animation:rise .8s var(--ease) .25s both}
+.phone.arriving .scr>.row{animation:cin .7s var(--ease) .2s both}
+.phone.arriving .next>.tile{animation-delay:.55s}
+.phone.arriving .next>.tile:nth-child(2){animation-delay:.62s}.phone.arriving .next>.tile:nth-child(3){animation-delay:.69s}.phone.arriving .next>.tile:nth-child(n+4){animation-delay:.76s}
+@keyframes rise{from{opacity:0;transform:translateY(40px)}}
+
+/* ---- les modèles de cadran : pas seulement une couleur ---- */
+.hr{font-family:var(--title);font-size:17px;font-weight:500;fill:var(--ink);transition:fill .4s,opacity .4s}
+.p[data-p=kairos] .hr{font-family:var(--ui);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.hr.past{opacity:.42}
+.hr.on{fill:var(--acct);font-weight:700;font-size:20px}
+.p[data-p=kairos] .hr.on{font-size:15px}
+.p[data-face=otiot] .phone .center strong{font-size:48px}
+.p[data-face=otiot] .phone .center .what{font-size:15px;max-width:128px}
+.p[data-face=otiot] .phone .center .cic{width:22px;height:22px}
+.p[data-face=pashut] .phone .center .cic,.p[data-face=pashut] .phone .center small{display:none}
+.p[data-face=pashut] .phone .center strong{font-size:78px;font-weight:300;letter-spacing:-.03em}
+.p[data-face=pashut] .phone .center .what{font-size:18px;max-width:190px}
+
+/* ---- la jauge de lisibilité, sur la page ---- */
+.gauge{font-size:13.5px;color:var(--page-mute);margin:10px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;max-width:none}
+.gauge b{color:var(--page-ink);font-weight:600;font-variant-numeric:tabular-nums}
+.gauge i{width:9px;height:9px;border-radius:50%;flex:none}
+.gauge i.ok,.gauge b.ok{background:#56D38F}.gauge b.ok{background:none;color:#56D38F}
+.gauge i.ko{background:#FF6B5E}.gauge b.ko{color:#FF6B5E}
+.gauge span{color:#7C8494}
+
+@media (prefers-reduced-motion:reduce){
+  .glass::after,.halo,.urgent .rest,.scr.enter,.next>.tile,.center.chg>*,.wpage,.sheet,.scrim,.tb button[aria-selected=true] span,.tb button[aria-selected=true] svg{animation:none}
+  .pill,.tile,.tb,.fbtn,.glass,.tb button{transition:none}
+}
+
+/* la barre d'état : un voile seulement quand le ciel derrière elle le demande (nuages clairs sur ciel sombre) */
+.sb{isolation:isolate}
+.sb::before{content:"";position:absolute;inset:0 0 -22px;z-index:-1;background:linear-gradient(to bottom,var(--s),transparent);pointer-events:none;transition:opacity .5s}
+.phone:not([data-scr="0"]) .sb::before{opacity:0}
+/* l'heure de la montre : dans une pastille de verre, plus jamais posée à nu sur le ciel */
+.wclock{inset-inline:auto;left:50%;transform:translateX(-50%);top:24px;padding:1px 9px;border-radius:99px;background:var(--s);color:var(--ink);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);white-space:nowrap}
+.sfc.wd,.p[data-theme=light] .sfc.wd{background:var(--sheet);color:var(--ink)}
