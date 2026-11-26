@@ -215,8 +215,10 @@
       '<div class="next" data-list="next"></div>';
   }
   function scrLouah() {
-    return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="−1">' + ic('chev', 'mir') + '</button><div style="text-align:center"><div class="h1" style="margin:0" data-t="date"></div><div class="meta" data-t="wd"></div></div>' +
-      '<button data-act="day" data-d="1" aria-label="+1">' + ic('chev', 'mir flipx') + '</button></div><div data-h="mooncard"></div><ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
+    // Les flèches pointent vers l'extérieur : en hébreu et en arabe, le jour suivant est à gauche.
+    var nav = { he: ['היום הקודם', 'היום הבא'], ar: ['اليوم السابق', 'اليوم التالي'], fr: ['Jour précédent', 'Jour suivant'] }[P().lang];
+    return '<div class="daynav"><button data-act="day" data-d="-1" aria-label="' + nav[0] + '">' + ic('chev', 'mir flipx') + '</button><div style="text-align:center"><div class="h1" style="margin:0" data-t="date"></div><div class="meta" data-t="wd"></div><div class="meta greg" data-t="greg"></div></div>' +
+      '<button data-act="day" data-d="1" aria-label="' + nav[1] + '">' + ic('chev', 'mir') + '</button></div><div data-h="mooncard"></div><ul class="list" data-list="louah"></ul><p class="meta" style="margin-top:14px" data-t="shita"></p><p class="meta">' + L().note + '</p>';
   }
   function scrCal() { return '<div class="h1">' + L().week + '</div><p class="meta" data-t="date"></p><div class="wk" data-list="week"></div>'; }
   function scrAlerts() { return '<div class="h1">' + L().alerts + '</div><div data-list="alerts"></div>'; }
@@ -320,7 +322,7 @@
     root.dataset.p = S.p; root.dataset.theme = G.pref; root.dataset.face = S.face; root.dataset.shabbat = shab ? '1' : '';
     root.style.setProperty('--g', rgb(k.tri[1])); root.style.setProperty('--skybg', k.plain ? '#000' : 'linear-gradient(180deg,' + rgb(k.tri[0]) + ' 0%,' + rgb(k.tri[1]) + ' 46%,' + rgb(k.tri[2]) + ' 100%)');
     var whatFull = S.p === 'kairos' ? m.window.name : remText(m.remaining) + ' ' + w.what;
-    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT + (S.face === 'otiot' && S.p === 'hatadhar' ? ' · שעה ' + HOURS.he[Math.min(11, Math.floor(m.frac * 12))] + '׳' : ''), untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
+    var v = { clock: hm(m.now, z), city: m.city[m.product.lang], date: dateText(m), wd: weekday(m), greg: S.p === 'kairos' ? '' : new Intl.DateTimeFormat(m.product.lang + '-u-ca-gregory-nu-latn', { day: 'numeric', month: 'long', year: 'numeric', timeZone: z }).format(m.now), what: w.what, whatShort: S.p === 'kairos' ? m.window.name : w.what, whatFull: whatFull, untilT: l.until + ' ' + endT + (S.face === 'otiot' && S.p === 'hatadhar' ? ' · שעה ' + HOURS.he[Math.min(11, Math.floor(m.frac * 12))] + '׳' : ''), untilL: m.window.endLabel + ' · ' + endT, plain: remPlain(m.remaining),
       bear: m.bearing == null ? '' : Math.round(m.bearing) + '°', target: m.target ? m.target.label : '', dist: m.distance == null ? '' : Math.round(m.distance).toLocaleString('fr-FR') + ' ' + l.km, salt: l.sunAlt + ' ' + Math.round(m.sky.sun.alt) + '°', tasbih: S.tasbih, shabcap: shab ? l.shabbat : '',
       shita: S.p === 'hatadhar' ? (cfg().opinion === 'mga' ? 'סוף זמן קריאת שמע ותפילה לפי המגן אברהם' : 'סוף זמן קריאת שמע ותפילה לפי הגר״א') : S.p === 'awqat' ? 'طريقة الحساب: ' + T.METHODS[cfg().method].ar : '' };
     var hv = { big: remBig(m.remaining), mooncard: moonCard(m),

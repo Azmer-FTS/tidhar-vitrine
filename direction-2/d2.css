@@ -608,3 +608,6 @@ body.embed .wrap{padding:0 12px}
 /* l'heure de la montre : dans une pastille de verre, plus jamais posée à nu sur le ciel */
 .wclock{inset-inline:auto;left:50%;transform:translateX(-50%);top:24px;padding:1px 9px;border-radius:99px;background:var(--s);color:var(--ink);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);white-space:nowrap}
 .sfc.wd,.p[data-theme=light] .sfc.wd{background:var(--sheet);color:var(--ink)}
+
+.greg{font-variant-numeric:tabular-nums}
+.greg:empty{display:none}
